@@ -48,14 +48,19 @@ There are no other public functions.
 == Parse tree overview == 
 The parsed representation returned by php-sql-parser is an associative array of important SQL sections and the information about the clauses in each of those sections.
  
-Because this is easier to visualize, I'll provide a simple example:
+Because this is easier to visualize, I'll provide a simple example.  As I said, the parser splits up the query into sections. Later the manual will describe what sections are available each of the supported SQL statement types.
+
+In the example the given query has three sections: *SELECT*,*FROM*,*WHERE*.  You will see each of these sections in the parser output.  Each of those sections contain _items_.  Each _item_ represents a keyword, a literal value, a subquery, an expression or a column reference. 
+
+In the following example, the *SELECT* section contains one _item_ which is a column reference (colref).  The FROM clause contains only one table.  You'll notice that it still says 'JOIN'.  Don't be confused by this.  Every table item is a join, but it may not have any join critera.  Finally, the where clause consists of three items, a colref, an operator and a literal value (const).
+
 ===simple example===
 ----
 {{{
 <?php
   require_once('php-sql-parser.php');
   $parser=new PHPSQLParser('
-SELECT a,b,c 
+SELECT a 
   from some_table an_alias
  WHERE d > 5;
 ');
@@ -77,38 +82,6 @@ Array
                     [sub_tree] => 
                     [alias] => `a`
                 )
-
-            [1] => Array
-                (
-                    [expr_type] => colref
-                    [base_expr] => b
-                    [sub_tree] => 
-                    [alias] => `b`
-                )
-
-            [2] => Array
-                (
-                    [expr_type] => colref
-                    [base_expr] => c
-                    [sub_tree] => 
-                    [alias] => `c`
-                )
-
-        )
-
-    [FROM] => Array
-        (
-            [0] => Array
-                (
-                    [table] => some_table
-                    [alias] => an_alias
-                    [join_type] => JOIN
-                    [ref_type] => 
-                    [ref_clause] => 
-                    [base_expr] => 
-                    [sub_tree] => 
-                )
-
         )
 
     [WHERE] => Array
