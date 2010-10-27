@@ -1,0 +1,900 @@
+#summary An example of a the parse tree of a highly complex SQL statement
+#labels Featured,Phase-Implementation
+
+= Complex Example =
+
+== Code ==
+{{{
+require_once('php-sql-parser.php');
+$sql = '
+select DISTINCT 1+2   c1, 1+ 2 as
+`c2`, sum(c2),"Status" = CASE
+        WHEN quantity > 0 THEN "in stock"
+        ELSE "out of stock"
+        END
+, t4.c1, (select c1+c2 from t1 table limit 1) as subquery into @a1, @a2, @a3 from `table` the_t1 left outer join t2 using(c1,c2) join
+(select a, b, length(concat(a,b,c)) from ( select 1 a,2 b,3 c from some_Table ) table ) subquery_in_from join t3 as tX on tX.c1 = the_t1.c1 natural join t4 t4_x using(cX)  where c1 = 1 and c2 in (1,2,3, "apple") and exists ( select 1 from some_other_table another_table where x > 1) and ("zebra" = "orange" or 1 = 1) group by 1, 2 having sum(c2) > 1 ORDER BY 2, c1 DESC LIMIT 0, 10 into outfile "/xyz" FOR UPDATE LOCK IN SHARE MODE
+UNION ALL
+SELECT NULL,NULL,NULL,NULL,NULL FROM DUAL LIMIT 1';
+$parser = new PHPSQLParser($sql);
+print_r($parser->parsed);
+}}}
+
+== Output ==
+{{{
+Array
+(
+    [UNION ALL] => Array
+        (
+            [0] => Array
+                (
+                    [OPTIONS] => Array
+                        (
+                            [0] => DISTINCT
+                            [1] => FOR UPDATE
+                            [2] => LOCK IN SHARE MODE
+                        )
+
+                    [SELECT] => Array
+                        (
+                            [0] => Array
+                                (
+                                    [alias] => `c1`
+                                    [expr_type] => expression
+                                    [sub_tree] => Array
+                                        (
+                                            [0] => Array
+                                                (
+                                                    [expr_type] => const
+                                                    [base_expr] => 1
+                                                    [sub_tree] => 
+                                                )
+
+                                            [1] => Array
+                                                (
+                                                    [expr_type] => operator
+                                                    [base_expr] => +
+                                                    [sub_tree] => 
+                                                )
+
+                                            [2] => Array
+                                                (
+                                                    [expr_type] => const
+                                                    [base_expr] => 2
+                                                    [sub_tree] => 
+                                                )
+
+                                        )
+
+                                )
+
+                            [1] => Array
+                                (
+                                    [alias] => `c2`
+                                    [expr_type] => expression
+                                    [sub_tree] => Array
+                                        (
+                                            [0] => Array
+                                                (
+                                                    [expr_type] => const
+                                                    [base_expr] => 1
+                                                    [sub_tree] => 
+                                                )
+
+                                            [1] => Array
+                                                (
+                                                    [expr_type] => operator
+                                                    [base_expr] => +
+                                                    [sub_tree] => 
+                                                )
+
+                                            [2] => Array
+                                                (
+                                                    [expr_type] => const
+                                                    [base_expr] => 2
+                                                    [sub_tree] => 
+                                                )
+
+                                            [3] => Array
+                                                (
+                                                    [expr_type] => colref
+                                                    [base_expr] => `c2`
+                                                    [sub_tree] => 
+                                                )
+
+                                        )
+
+                                )
+
+                            [2] => Array
+                                (
+                                    [alias] => `sum(c2)`
+                                    [expr_type] => expression
+                                    [sub_tree] => Array
+                                        (
+                                            [0] => Array
+                                                (
+                                                    [expr_type] => reserved
+                                                    [base_expr] => SUM
+                                                    [sub_tree] => 
+                                                )
+
+                                            [1] => Array
+                                                (
+                                                    [expr_type] => 
+                                                    [base_expr] => (c2)
+                                                    [sub_tree] => Array
+                                                        (
+                                                            [0] => Array
+                                                                (
+                                                                    [expr_type] => colref
+                                                                    [base_expr] => c2
+                                                                    [sub_tree] => 
+                                                                )
+
+                                                        )
+
+                                                )
+
+                                        )
+
+                                )
+
+                            [3] => Array
+                                (
+                                    [alias] => `"Status" = CASE  WHEN quantity >   THEN "in stock"  ELSE "out of stock"  END`
+                                    [expr_type] => expression
+                                    [sub_tree] => Array
+                                        (
+                                            [0] => Array
+                                                (
+                                                    [expr_type] => const
+                                                    [base_expr] => "Status"
+                                                    [sub_tree] => 
+                                                )
+
+                                            [1] => Array
+                                                (
+                                                    [expr_type] => operator
+                                                    [base_expr] => =
+                                                    [sub_tree] => 
+                                                )
+
+                                            [2] => Array
+                                                (
+                                                    [expr_type] => operator
+                                                    [base_expr] => CASE
+                                                    [sub_tree] => 
+                                                )
+
+                                            [3] => Array
+                                                (
+                                                    [expr_type] => operator
+                                                    [base_expr] => WHEN
+                                                    [sub_tree] => 
+                                                )
+
+                                            [4] => Array
+                                                (
+                                                    [expr_type] => colref
+                                                    [base_expr] => quantity
+                                                    [sub_tree] => 
+                                                )
+
+                                            [5] => Array
+                                                (
+                                                    [expr_type] => operator
+                                                    [base_expr] => >
+                                                    [sub_tree] => 
+                                                )
+
+                                            [6] => Array
+                                                (
+                                                    [expr_type] => reserved
+                                                    [base_expr] => THEN
+                                                    [sub_tree] => 
+                                                )
+
+                                            [7] => Array
+                                                (
+                                                    [expr_type] => const
+                                                    [base_expr] => "in stock"
+                                                    [sub_tree] => 
+                                                )
+
+                                            [8] => Array
+                                                (
+                                                    [expr_type] => reserved
+                                                    [base_expr] => ELSE
+                                                    [sub_tree] => 
+                                                )
+
+                                            [9] => Array
+                                                (
+                                                    [expr_type] => const
+                                                    [base_expr] => "out of stock"
+                                                    [sub_tree] => 
+                                                )
+
+                                            [10] => Array
+                                                (
+                                                    [expr_type] => reserved
+                                                    [base_expr] => END
+                                                    [sub_tree] => 
+                                                )
+
+                                        )
+
+                                )
+
+                            [4] => Array
+                                (
+                                    [expr_type] => colref
+                                    [base_expr] => t4.c1
+                                    [sub_tree] => 
+                                    [alias] => `t4.c1`
+                                )
+
+                            [5] => Array
+                                (
+                                    [alias] => `subquery`
+                                    [expr_type] => subquery
+                                    [sub_tree] => Array
+                                        (
+                                            [SELECT] => Array
+                                                (
+                                                    [0] => Array
+                                                        (
+                                                            [alias] => `c1+c2`
+                                                            [expr_type] => expression
+                                                            [sub_tree] => Array
+                                                                (
+                                                                    [0] => Array
+                                                                        (
+                                                                            [expr_type] => colref
+                                                                            [base_expr] => c1
+                                                                            [sub_tree] => 
+                                                                        )
+
+                                                                    [1] => Array
+                                                                        (
+                                                                            [expr_type] => operator
+                                                                            [base_expr] => +
+                                                                            [sub_tree] => 
+                                                                        )
+
+                                                                    [2] => Array
+                                                                        (
+                                                                            [expr_type] => colref
+                                                                            [base_expr] => c2
+                                                                            [sub_tree] => 
+                                                                        )
+
+                                                                )
+
+                                                        )
+
+                                                )
+
+                                            [FROM] => Array
+                                                (
+                                                    [0] => Array
+                                                        (
+                                                            [table] => t1
+                                                            [alias] => table
+                                                            [join_type] => JOIN
+                                                            [ref_type] => 
+                                                            [ref_clause] => 
+                                                            [base_expr] => 
+                                                            [sub_tree] => 
+                                                        )
+
+                                                )
+
+                                            [LIMIT] => Array
+                                                (
+                                                    [start] => 0
+                                                    [end] => 1
+                                                )
+
+                                        )
+
+                                )
+
+                        )
+
+                    [INTO] => Array
+                        (
+                            [0] => @a1
+                            [1] => ,
+                            [2] => @a2
+                            [3] => ,
+                            [4] => @a3
+                            [5] => 
+                            [6] => outfile
+                            [7] => 
+                            [8] => "/xyz"
+                            [9] => 
+                            [10] => UPDATE
+                            [11] => 
+                            [12] => IN
+                            [13] => 
+                            [14] => 
+                        )
+
+                    [FROM] => Array
+                        (
+                            [0] => Array
+                                (
+                                    [table] => `table`
+                                    [alias] => the_t1
+                                    [join_type] => JOIN
+                                    [ref_type] => 
+                                    [ref_clause] => 
+                                    [base_expr] => 
+                                    [sub_tree] => 
+                                )
+
+                            [1] => Array
+                                (
+                                    [table] => t2
+                                    [alias] => t2
+                                    [join_type] => LEFT JOIN
+                                    [ref_type] => USING
+                                    [ref_clause] => (c1,c2) 
+                                    [base_expr] => 
+                                    [sub_tree] => 
+                                )
+
+                            [2] => Array
+                                (
+                                    [table] => DEPENDENT-SUBQUERY
+                                    [alias] => subquery_in_from
+                                    [join_type] => JOIN
+                                    [ref_type] => 
+                                    [ref_clause] => 
+                                    [base_expr] => 
+                                    [sub_tree] => Array
+                                        (
+                                            [SELECT] => Array
+                                                (
+                                                    [0] => Array
+                                                        (
+                                                            [expr_type] => colref
+                                                            [base_expr] => a
+                                                            [sub_tree] => 
+                                                            [alias] => `a`
+                                                        )
+
+                                                    [1] => Array
+                                                        (
+                                                            [expr_type] => colref
+                                                            [base_expr] => b
+                                                            [sub_tree] => 
+                                                            [alias] => `b`
+                                                        )
+
+                                                    [2] => Array
+                                                        (
+                                                            [alias] => `length(concat(a,b,c))`
+                                                            [expr_type] => expression
+                                                            [sub_tree] => Array
+                                                                (
+                                                                    [0] => Array
+                                                                        (
+                                                                            [expr_type] => reserved
+                                                                            [base_expr] => LENGTH
+                                                                            [sub_tree] => 
+                                                                        )
+
+                                                                    [1] => Array
+                                                                        (
+                                                                            [expr_type] => 
+                                                                            [base_expr] => (concat(a,b,c))
+                                                                            [sub_tree] => Array
+                                                                                (
+                                                                                    [0] => Array
+                                                                                        (
+                                                                                            [expr_type] => reserved
+                                                                                            [base_expr] => CONCAT
+                                                                                            [sub_tree] => 
+                                                                                        )
+
+                                                                                    [1] => Array
+                                                                                        (
+                                                                                            [expr_type] => 
+                                                                                            [base_expr] => (a,b,c)
+                                                                                            [sub_tree] => Array
+                                                                                                (
+                                                                                                    [0] => Array
+                                                                                                        (
+                                                                                                            [expr_type] => colref
+                                                                                                            [base_expr] => a
+                                                                                                            [sub_tree] => 
+                                                                                                        )
+
+                                                                                                    [1] => Array
+                                                                                                        (
+                                                                                                            [expr_type] => reserved
+                                                                                                            [base_expr] => ,
+                                                                                                            [sub_tree] => 
+                                                                                                        )
+
+                                                                                                    [2] => Array
+                                                                                                        (
+                                                                                                            [expr_type] => colref
+                                                                                                            [base_expr] => b
+                                                                                                            [sub_tree] => 
+                                                                                                        )
+
+                                                                                                    [3] => Array
+                                                                                                        (
+                                                                                                            [expr_type] => reserved
+                                                                                                            [base_expr] => ,
+                                                                                                            [sub_tree] => 
+                                                                                                        )
+
+                                                                                                    [4] => Array
+                                                                                                        (
+                                                                                                            [expr_type] => colref
+                                                                                                            [base_expr] => c
+                                                                                                            [sub_tree] => 
+                                                                                                        )
+
+                                                                                                )
+
+                                                                                        )
+
+                                                                                )
+
+                                                                        )
+
+                                                                )
+
+                                                        )
+
+                                                )
+
+                                            [FROM] => Array
+                                                (
+                                                    [0] => Array
+                                                        (
+                                                            [table] => DEPENDENT-SUBQUERY
+                                                            [alias] => table
+                                                            [join_type] => JOIN
+                                                            [ref_type] => 
+                                                            [ref_clause] => 
+                                                            [base_expr] => 
+                                                            [sub_tree] => Array
+                                                                (
+                                                                    [SELECT] => Array
+                                                                        (
+                                                                            [0] => Array
+                                                                                (
+                                                                                    [expr_type] => const
+                                                                                    [base_expr] => 1
+                                                                                    [sub_tree] => 
+                                                                                    [alias] => `a`
+                                                                                )
+
+                                                                            [1] => Array
+                                                                                (
+                                                                                    [expr_type] => const
+                                                                                    [base_expr] => 2
+                                                                                    [sub_tree] => 
+                                                                                    [alias] => `b`
+                                                                                )
+
+                                                                            [2] => Array
+                                                                                (
+                                                                                    [expr_type] => const
+                                                                                    [base_expr] => 3
+                                                                                    [sub_tree] => 
+                                                                                    [alias] => `c`
+                                                                                )
+
+                                                                        )
+
+                                                                    [FROM] => Array
+                                                                        (
+                                                                            [0] => Array
+                                                                                (
+                                                                                    [table] => some_Table
+                                                                                    [alias] => some_Table
+                                                                                    [join_type] => JOIN
+                                                                                    [ref_type] => 
+                                                                                    [ref_clause] => 
+                                                                                    [base_expr] => 
+                                                                                    [sub_tree] => 
+                                                                                )
+
+                                                                        )
+
+                                                                )
+
+                                                        )
+
+                                                )
+
+                                        )
+
+                                )
+
+                            [3] => Array
+                                (
+                                    [table] => t3
+                                    [alias] => tX
+                                    [join_type] => JOIN
+                                    [ref_type] => NATURAL
+                                    [ref_clause] =>  
+                                    [base_expr] => 
+                                    [sub_tree] => 
+                                )
+
+                            [4] => Array
+                                (
+                                    [table] => t4
+                                    [alias] => t4_x
+                                    [join_type] => JOIN
+                                    [ref_type] => USING
+                                    [ref_clause] => (cX) 
+                                    [base_expr] => 
+                                    [sub_tree] => 
+                                )
+
+                        )
+
+                    [WHERE] => Array
+                        (
+                            [0] => Array
+                                (
+                                    [expr_type] => colref
+                                    [base_expr] => c1
+                                    [sub_tree] => 
+                                )
+
+                            [1] => Array
+                                (
+                                    [expr_type] => operator
+                                    [base_expr] => =
+                                    [sub_tree] => 
+                                )
+
+                            [2] => Array
+                                (
+                                    [expr_type] => const
+                                    [base_expr] => 1
+                                    [sub_tree] => 
+                                )
+
+                            [3] => Array
+                                (
+                                    [expr_type] => operator
+                                    [base_expr] => and
+                                    [sub_tree] => 
+                                )
+
+                            [4] => Array
+                                (
+                                    [expr_type] => colref
+                                    [base_expr] => c2
+                                    [sub_tree] => 
+                                )
+
+                            [5] => Array
+                                (
+                                    [expr_type] => operator
+                                    [base_expr] => in
+                                    [sub_tree] => 
+                                )
+
+                            [6] => Array
+                                (
+                                    [expr_type] => in-list
+                                    [base_expr] => (1,2,3, "apple")
+                                    [sub_tree] => (1,2,3, "apple")
+                                )
+
+                            [7] => Array
+                                (
+                                    [expr_type] => operator
+                                    [base_expr] => and
+                                    [sub_tree] => 
+                                )
+
+                            [8] => Array
+                                (
+                                    [expr_type] => reserved
+                                    [base_expr] => EXISTS
+                                    [sub_tree] => 
+                                )
+
+                            [9] => Array
+                                (
+                                    [expr_type] => subquery
+                                    [base_expr] => ( select 1 from some_other_table another_table where x > 1)
+                                    [sub_tree] => Array
+                                        (
+                                            [SELECT] => Array
+                                                (
+                                                    [0] => Array
+                                                        (
+                                                            [expr_type] => const
+                                                            [base_expr] => 1
+                                                            [sub_tree] => 
+                                                            [alias] => `1`
+                                                        )
+
+                                                )
+
+                                            [FROM] => Array
+                                                (
+                                                    [0] => Array
+                                                        (
+                                                            [table] => some_other_table
+                                                            [alias] => another_table
+                                                            [join_type] => JOIN
+                                                            [ref_type] => 
+                                                            [ref_clause] => 
+                                                            [base_expr] => 
+                                                            [sub_tree] => 
+                                                        )
+
+                                                )
+
+                                            [WHERE] => Array
+                                                (
+                                                    [0] => Array
+                                                        (
+                                                            [expr_type] => colref
+                                                            [base_expr] => x
+                                                            [sub_tree] => 
+                                                        )
+
+                                                    [1] => Array
+                                                        (
+                                                            [expr_type] => operator
+                                                            [base_expr] => >
+                                                            [sub_tree] => 
+                                                        )
+
+                                                    [2] => Array
+                                                        (
+                                                            [expr_type] => const
+                                                            [base_expr] => 1
+                                                            [sub_tree] => 
+                                                        )
+
+                                                )
+
+                                        )
+
+                                )
+
+                            [10] => Array
+                                (
+                                    [expr_type] => operator
+                                    [base_expr] => and
+                                    [sub_tree] => 
+                                )
+
+                            [11] => Array
+                                (
+                                    [expr_type] => 
+                                    [base_expr] => ("zebra" = "orange" or 1 = 1)
+                                    [sub_tree] => Array
+                                        (
+                                            [0] => Array
+                                                (
+                                                    [expr_type] => const
+                                                    [base_expr] => "zebra"
+                                                    [sub_tree] => 
+                                                )
+
+                                            [1] => Array
+                                                (
+                                                    [expr_type] => operator
+                                                    [base_expr] => =
+                                                    [sub_tree] => 
+                                                )
+
+                                            [2] => Array
+                                                (
+                                                    [expr_type] => const
+                                                    [base_expr] => "orange"
+                                                    [sub_tree] => 
+                                                )
+
+                                            [3] => Array
+                                                (
+                                                    [expr_type] => operator
+                                                    [base_expr] => or
+                                                    [sub_tree] => 
+                                                )
+
+                                            [4] => Array
+                                                (
+                                                    [expr_type] => const
+                                                    [base_expr] => 1
+                                                    [sub_tree] => 
+                                                )
+
+                                            [5] => Array
+                                                (
+                                                    [expr_type] => operator
+                                                    [base_expr] => =
+                                                    [sub_tree] => 
+                                                )
+
+                                            [6] => Array
+                                                (
+                                                    [expr_type] => const
+                                                    [base_expr] => 1
+                                                    [sub_tree] => 
+                                                )
+
+                                        )
+
+                                )
+
+                        )
+
+                    [GROUP] => Array
+                        (
+                            [0] => Array
+                                (
+                                    [type] => pos
+                                    [expression] => 1
+                                    [direction] => ASC
+                                )
+
+                            [1] => Array
+                                (
+                                    [type] => pos
+                                    [expression] => 2
+                                    [direction] => ASC
+                                )
+
+                        )
+
+                    [HAVING] => Array
+                        (
+                            [0] => Array
+                                (
+                                    [expr_type] => reserved
+                                    [base_expr] => SUM
+                                    [sub_tree] => 
+                                )
+
+                            [1] => Array
+                                (
+                                    [expr_type] => 
+                                    [base_expr] => (c2)
+                                    [sub_tree] => Array
+                                        (
+                                            [0] => Array
+                                                (
+                                                    [expr_type] => colref
+                                                    [base_expr] => c2
+                                                    [sub_tree] => 
+                                                )
+
+                                        )
+
+                                )
+
+                            [2] => Array
+                                (
+                                    [expr_type] => operator
+                                    [base_expr] => >
+                                    [sub_tree] => 
+                                )
+
+                            [3] => Array
+                                (
+                                    [expr_type] => const
+                                    [base_expr] => 1
+                                    [sub_tree] => 
+                                )
+
+                        )
+
+                    [ORDER] => Array
+                        (
+                            [0] => Array
+                                (
+                                    [type] => pos
+                                    [expression] => 2
+                                    [direction] => ASC
+                                )
+
+                            [1] => Array
+                                (
+                                    [type] => alias
+                                    [expression] => c1
+                                    [direction] => DESC
+                                )
+
+                        )
+
+                    [LIMIT] => Array
+                        (
+                            [start] => 0
+                            [end] => 10
+                        )
+
+                )
+
+            [1] => Array
+                (
+                    [SELECT] => Array
+                        (
+                            [0] => Array
+                                (
+                                    [expr_type] => operator
+                                    [base_expr] => NULL
+                                    [sub_tree] => 
+                                    [alias] => `NULL`
+                                )
+
+                            [1] => Array
+                                (
+                                    [expr_type] => operator
+                                    [base_expr] => NULL
+                                    [sub_tree] => 
+                                    [alias] => `NULL`
+                                )
+
+                            [2] => Array
+                                (
+                                    [expr_type] => operator
+                                    [base_expr] => NULL
+                                    [sub_tree] => 
+                                    [alias] => `NULL`
+                                )
+
+                            [3] => Array
+                                (
+                                    [expr_type] => operator
+                                    [base_expr] => NULL
+                                    [sub_tree] => 
+                                    [alias] => `NULL`
+                                )
+
+                            [4] => Array
+                                (
+                                    [expr_type] => operator
+                                    [base_expr] => NULL
+                                    [sub_tree] => 
+                                    [alias] => `NULL`
+                                )
+
+                        )
+
+                    [FROM] => Array
+                        (
+                            [0] => Array
+                                (
+                                    [table] => DUAL
+                                    [alias] => DUAL
+                                    [join_type] => JOIN
+                                    [ref_type] => 
+                                    [ref_clause] => 
+                                    [base_expr] => 
+                                    [sub_tree] => 
+                                )
+
+                        )
+
+                    [LIMIT] => Array
+                        (
+                            [start] => 0
+                            [end] => 1
+                        )
+
+                )
+
+        )
+
+)
+}}}
