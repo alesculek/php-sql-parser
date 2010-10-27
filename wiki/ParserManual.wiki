@@ -2,7 +2,6 @@
 #labels Featured,Phase-Implementation
 
 = PHP-SQL-Parser Manual =
-This is the manual for php-sql-parser, a pure PHP SQL parser with a focus on the MySQL dialect.
 
 == How to integrate php-sql-parse into your application ==
 The parser is a self contained class.  It does not require any PECL packages.  
@@ -16,13 +15,127 @@ $parsed = $parser->parse($sql);
 print_r($parsed);
 }}}
 
-== Using the parser ==
-The best way to see how to use the parser is to look at the examples, which you can get here:
+== Trying the examples ==
+The best way to see how to use the parser is to look at the extensive examples, which you can get here:
    # Download the SQL parser file: http://php-sql-parser.googlecode.com/svn/trunk/example.php
    # Place it into the same location of php-sql-parse.php (if it isn't in your include path)
    # Execute the example:
 {{{
 php example.php
+}}}
+
+== Using the parser == 
+
+===There are two ways in which you can parse statements===
+
+   # Use the *constructor*
+{{{ 
+/* The constructor simply calls the parser() method on the provided SQL, for convenience.*/
+$parser = new PHPSQLParser('select 1');
+print_r($parser->parsed);
+}}}
+   # Use the parse() method
+{{{ 
+$parser = new PHPSQLParser();
+print_r($parser->parse('select 2'));
+
+/* get the tree for the last parsed statement */
+$save = $parser->parsed;
+}}}
+
+== Parse tree overview == 
+The parsed representation returned by php-sql-parser is an associative array of important SQL sections and the information about the clauses in each of those sections.
+ 
+Because this is easier to visualize, I'll provide a simple example
+===Example Output===
+*Example Usage*
+----
+{{{
+<?php
+  require_once('php-sql-parser.php');
+  $parser=new PHPSQLParser('
+SELECT a,b,c 
+  from some_table an_alias
+ WHERE d > 5;
+');
+
+  print_r($parser->parsed);  
+}}}
+
+*Example Output (via print_r)*
+----
+{{{
+Array
+( 
+    [SELECT] => Array
+        (
+            [0] => Array
+                (
+                    [expr_type] => colref
+                    [base_expr] => a
+                    [sub_tree] => 
+                    [alias] => `a`
+                )
+
+            [1] => Array
+                (
+                    [expr_type] => colref
+                    [base_expr] => b
+                    [sub_tree] => 
+                    [alias] => `b`
+                )
+
+            [2] => Array
+                (
+                    [expr_type] => colref
+                    [base_expr] => c
+                    [sub_tree] => 
+                    [alias] => `c`
+                )
+
+        )
+
+    [FROM] => Array
+        (
+            [0] => Array
+                (
+                    [table] => some_table
+                    [alias] => an_alias
+                    [join_type] => JOIN
+                    [ref_type] => 
+                    [ref_clause] => 
+                    [base_expr] => 
+                    [sub_tree] => 
+                )
+
+        )
+
+    [WHERE] => Array
+        (
+            [0] => Array
+                (
+                    [expr_type] => colref
+                    [base_expr] => d
+                    [sub_tree] => 
+                )
+
+            [1] => Array
+                (
+                    [expr_type] => operator
+                    [base_expr] => >
+                    [sub_tree] => 
+                )
+
+            [2] => Array
+                (
+                    [expr_type] => const
+                    [base_expr] => 5
+                    [sub_tree] => 
+                )
+
+        )
+
+)
 }}}
 
 == Parse tree in detail ==
