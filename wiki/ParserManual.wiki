@@ -1,0 +1,30 @@
+#summary The php-sql-parser manual
+#labels Featured,Phase-Implementation
+
+= PHP-SQL-Parser Manual =
+This is the manual for php-sql-parser, a pure PHP SQL parser with a focus on the MySQL dialect.
+
+== How to integrate php-sql-parse into your application ==
+The parser is a self contained class.  It does not require any PECL packages.  
+----
+   # Download the SQL parser file: http://php-sql-parser.googlecode.com/svn/trunk/php-sql-parser.php and place it into your include directory.
+   # add *require_once*('php-sql-parser.php') to your application
+   # Use the parser:
+{{{
+$parser = new PHPSQLParser();
+$parsed = $parser->parse($sql);
+print_r($parsed);
+}}}
+
+== Using the parser ==
+The best way to see how to use the parser is to look at the examples, which you can get here:
+   # Download the SQL parser file: http://php-sql-parser.googlecode.com/svn/trunk/example.php
+   # Place it into the same location of php-sql-parse.php (if it isn't in your include path)
+   # Execute the example:
+{{{
+php example.php
+}}}
+
+== Parse tree in detail ==
+
+=== SELECT ===
