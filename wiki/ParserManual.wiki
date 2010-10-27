@@ -48,9 +48,8 @@ There are no other public functions.
 == Parse tree overview == 
 The parsed representation returned by php-sql-parser is an associative array of important SQL sections and the information about the clauses in each of those sections.
  
-Because this is easier to visualize, I'll provide a simple example
-===Example Output===
-*Example Usage*
+Because this is easier to visualize, I'll provide a simple example:
+===simple example===
 ----
 {{{
 <?php
@@ -64,7 +63,7 @@ SELECT a,b,c
   print_r($parser->parsed);  
 }}}
 
-*Example Output (via print_r)*
+*Output*
 ----
 {{{
 Array
