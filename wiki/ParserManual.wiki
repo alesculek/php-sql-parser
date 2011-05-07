@@ -74,16 +74,32 @@ SELECT a
 ----
 {{{
 Array
-( 
+(
     [SELECT] => Array
         (
             [0] => Array
                 (
                     [expr_type] => colref
+                    [alias] => `a`
                     [base_expr] => a
                     [sub_tree] => 
-                    [alias] => `a`
                 )
+
+        )
+
+    [FROM] => Array
+        (
+            [0] => Array
+                (
+                    [table] => some_table
+                    [alias] => an_alias
+                    [join_type] => JOIN
+                    [ref_type] => 
+                    [ref_clause] => 
+                    [base_expr] => 
+                    [sub_tree] => 
+                )
+
         )
 
     [WHERE] => Array
@@ -112,8 +128,5 @@ Array
         )
 
 )
+
 }}}
-
-== Parse tree in detail ==
-
-=== SELECT ===
