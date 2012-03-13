@@ -15,6 +15,15 @@ $parsed = $parser->parse($sql);
 print_r($parsed);
 }}}
 
+   # it is also possible to generate keyword positions during the parser step
+   # for every base_expr entry the parser stores the position within the original SQL string
+{{{
+$parser = new PHPSQLParser();
+$parsed = $parser->parse($sql, true);
+print_r($parsed);
+}}}
+
+
 == Trying the examples ==
 The best way to see how to use the parser is to look at the extensive examples, which you can get here:
    # Download the SQL parser file: http://php-sql-parser.googlecode.com/svn/trunk/example.php
@@ -65,7 +74,7 @@ There is a ComplexExample which features almost all of the available SELECT synt
 SELECT a 
   from some_table an_alias
  WHERE d > 5;
-');
+', true);
 
   print_r($parser->parsed);  
 }}}
@@ -80,9 +89,10 @@ Array
             [0] => Array
                 (
                     [expr_type] => colref
-                    [alias] => `a`
+                    [alias] => 
                     [base_expr] => a
                     [sub_tree] => 
+                    [position] => 8
                 )
 
         )
@@ -91,13 +101,22 @@ Array
         (
             [0] => Array
                 (
+                    [expr_type] => table
                     [table] => some_table
-                    [alias] => an_alias
+                    [alias] => Array
+                        (
+                            [as] => 
+                            [name] => an_alias
+                            [base_expr] => an_alias
+                            [position] => 29
+                        )
+
                     [join_type] => JOIN
                     [ref_type] => 
                     [ref_clause] => 
-                    [base_expr] => 
+                    [base_expr] => some_table an_alias
                     [sub_tree] => 
+                    [position] => 18
                 )
 
         )
@@ -109,6 +128,7 @@ Array
                     [expr_type] => colref
                     [base_expr] => d
                     [sub_tree] => 
+                    [position] => 45
                 )
 
             [1] => Array
@@ -116,6 +136,7 @@ Array
                     [expr_type] => operator
                     [base_expr] => >
                     [sub_tree] => 
+                    [position] => 47
                 )
 
             [2] => Array
@@ -123,10 +144,10 @@ Array
                     [expr_type] => const
                     [base_expr] => 5
                     [sub_tree] => 
+                    [position] => 49
                 )
 
         )
 
 )
-
 }}}
