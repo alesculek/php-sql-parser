@@ -54,6 +54,31 @@ $save = $parser->parsed;
 
 There are no other public functions.
 
+
+== Using the creator == 
+
+===There are two ways in which you can create statements from parser output===
+
+   # Use the *constructor*
+{{{ 
+/* The constructor simply calls the create() method on the provided parser tree output for convenience.*/
+$parser = new PHPSQLParser('select 1');
+$creator = new PHPSQLCreator($parser->parsed);
+echo $creator->created;
+}}}
+   # Use the *create*() method
+{{{ 
+$parser = new PHPSQLParser('select 2');
+$creator = new PHPSQLCreator();
+echo $creator->create($parser->parsed); /* this is okay, the SQL is saved in the _created_ property.
+
+/* get the SQL statement for the last parsed statement */
+$save = $creator->created;
+}}}
+
+There are no other public functions.
+
+
 == Parse tree overview == 
 The parsed representation returned by php-sql-parser is an associative array of important SQL sections and the information about the clauses in each of those sections.
  
