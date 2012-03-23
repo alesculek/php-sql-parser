@@ -61,7 +61,7 @@ There are no other public functions.
 
    # Use the *constructor*
 {{{ 
-/* The constructor simply calls the create() method on the provided parser tree output for convenience.*/
+/* The constructor simply calls the create() method on the provided parser tree output for convenience. */
 $parser = new PHPSQLParser('select 1');
 $creator = new PHPSQLCreator($parser->parsed);
 echo $creator->created;
@@ -70,7 +70,7 @@ echo $creator->created;
 {{{ 
 $parser = new PHPSQLParser('select 2');
 $creator = new PHPSQLCreator();
-echo $creator->create($parser->parsed); /* this is okay, the SQL is saved in the _created_ property.
+echo $creator->create($parser->parsed); /* this is okay, the SQL is saved in the _created_ property. */
 
 /* get the SQL statement for the last parsed statement */
 $save = $creator->created;
