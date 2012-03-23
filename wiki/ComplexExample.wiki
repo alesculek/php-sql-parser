@@ -70,7 +70,8 @@ Array
                         (
                             [as] => 1
                             [name] => c2
-                            [base_expr] => as `c2`
+                            [base_expr] => as
+`c2`
                         )
 
                     [base_expr] => 1+ 2
@@ -153,7 +154,10 @@ Array
                             [base_expr] => case_statement
                         )
 
-                    [base_expr] => "Status" = CASE         WHEN quantity > 0 THEN 'in stock'         ELSE 'out of stock'         END
+                    [base_expr] => "Status" = CASE
+        WHEN quantity > 0 THEN 'in stock'
+        ELSE 'out of stock'
+        END
                     [sub_tree] => Array
                         (
                             [0] => Array
@@ -331,7 +335,7 @@ Array
 
                                             [LIMIT] => Array
                                                 (
-                                                    [start] => 0
+                                                    [start] => 
                                                     [end] => 1
                                                 )
 
@@ -721,14 +725,12 @@ Array
                 (
                     [type] => pos
                     [base_expr] => 1
-                    [direction] => ASC
                 )
 
             [1] => Array
                 (
                     [type] => pos
                     [base_expr] => 2
-                    [direction] => ASC
                 )
 
         )
