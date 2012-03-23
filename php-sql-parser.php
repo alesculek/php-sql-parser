@@ -530,6 +530,7 @@ EOREGEX
                 switch ($upper) {
 
                 /* Tokens that get their own sections. These keywords have subclauses. */
+                case 'CREATE':
                 case 'SELECT':
                 case 'ORDER':
                 case 'LIMIT':
@@ -577,6 +578,12 @@ EOREGEX
                     $token_category = $upper;
                     break;
 
+                case 'TABLE':
+                    if ($prev_category === 'CREATE') {
+                        $token_category = $upper;
+                    }
+                    break;
+                    
                 case 'INTO':
                 # prevent wrong handling of CACHE within LOAD INDEX INTO CACHE...
                     if ($prev_category === 'LOAD') {
@@ -772,6 +779,12 @@ EOREGEX
             if (!$out) {
                 return false;
             }
+            if (!empty($out['CREATE'])) {
+                $out['CREATE'] = $this->process_create($out['CREATE']);
+            }
+            if (!empty($out['TABLE'])) {
+                $out['TABLE'] = $this->process_table($out['TABLE']);
+            }
             if (!empty($out['SELECT'])) {
                 $out['SELECT'] = $this->process_select($out['SELECT']);
             }
@@ -824,6 +837,37 @@ EOREGEX
             return $out;
         }
 
+        private function process_create($tokens) {
+            $expr = array();
+            foreach ($tokens as $token) {
+                $trim = trim($token);
+                if ($trim === "") {
+                    continue;
+                }
+                $expr[] = $token;    # TODO: check temporary
+            }
+            return $expr;
+        }
+        
+        private function process_table($tokens) {
+            
+            $expr = array();
+            foreach ($tokens as $token) {
+                $trim = trim($token);
+                
+                if ($trim === "") {
+                    continue;
+                }
+                
+                $upper = strtoupper($trim);
+                
+                
+                $expr[] = $token;
+            }
+            return $expr;
+        }
+        
+        
         /* A SET list is simply a list of key = value expressions separated by comma (,).
          This function produces a list of the key/value expressions.
          */
