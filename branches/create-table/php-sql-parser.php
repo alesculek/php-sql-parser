@@ -496,7 +496,7 @@ EOREGEX
         private function processSQL(&$tokens) {
             $prev_category = "";
             $token_category = "";
-            $skip_next = false;
+            $skip_next = 0;
             $out = false;
 
             $tokenCount = count($tokens);
@@ -513,7 +513,7 @@ EOREGEX
                 /* If it isn't obvious, when $skip_next is set, then we ignore the next real
                  token, that is we ignore whitespace.
                  */
-                if ($skip_next) {
+                if ($skip_next > 0) {
                     if ($trim === "") {
                         if ($token_category !== "") { # is this correct??
                             $out[$token_category][] = $token;
@@ -523,7 +523,10 @@ EOREGEX
                     #to skip the token we replace it with whitespace
                     $trim = "";
                     $token = "";
-                    $skip_next = false;
+                    $skip_next--;
+                    if ($skip_next > 0) {
+                        continue;
+                    }
                 }
 
                 $upper = strtoupper($trim);
@@ -568,7 +571,7 @@ EOREGEX
                 case 'PREPARE':
                 case 'DEALLOCATE':
                     if ($trim == 'DEALLOCATE') {
-                        $skip_next = true;
+                        $skip_next = 1;
                     }
                     /* this FROM is different from FROM in other DML (not join related) */
                     if ($token_category == 'PREPARE' && $upper == 'FROM') {
@@ -580,10 +583,19 @@ EOREGEX
 
                 case 'TABLE':
                     if ($prev_category === 'CREATE') {
+                        $out[$prev_category][] = $upper;
                         $token_category = $upper;
+                        continue 2;
                     }
                     break;
-                    
+
+                case 'TEMPORARY':
+                    if ($prev_category === 'CREATE') {
+                        $out[$prev_category][] = $upper;
+                        continue 2;
+                    }
+                    break;
+
                 case 'INTO':
                 # prevent wrong handling of CACHE within LOAD INDEX INTO CACHE...
                     if ($prev_category === 'LOAD') {
@@ -657,7 +669,7 @@ EOREGEX
                         $out[$upper][0] = $upper;
                     } else {
                         $trim = 'LOCK IN SHARE MODE';
-                        $skip_next = true;
+                        $skip_next = 3;
                         $out['OPTIONS'][] = $trim;
                     }
                     continue 2;
@@ -684,7 +696,7 @@ EOREGEX
                     break;
 
                 case 'FOR':
-                    $skip_next = true;
+                    $skip_next = 1;
                     $out['OPTIONS'][] = 'FOR UPDATE';
                     continue 2;
                     break;
@@ -703,7 +715,7 @@ EOREGEX
                 case 'START':
                     $trim = "BEGIN";
                     $out[$upper][0] = $upper;
-                    $skip_next = true;
+                    $skip_next = 1;
                     break;
 
                 /* These tokens are ignored. */
@@ -745,7 +757,7 @@ EOREGEX
 
                 case 'WITH':
                     if ($token_category == 'GROUP') {
-                        $skip_next = true;
+                        $skip_next = 1;
                         $out['OPTIONS'][] = 'WITH ROLLUP';
                         continue 2;
                     }
@@ -753,6 +765,13 @@ EOREGEX
 
                 case 'AS':
                     break;
+
+                case 'IF':
+                    if ($prev_category === 'TABLE') {
+                        $out['CREATE'][] = 'IF NOT EXISTS';
+                        $skip_next = 2;
+                        continue 2;
+                    }
 
                 case '':
                 case ',':
@@ -841,33 +860,111 @@ EOREGEX
             $expr = array();
             foreach ($tokens as $token) {
                 $trim = trim($token);
+
                 if ($trim === "") {
                     continue;
                 }
-                $expr[] = $token;    # TODO: check temporary
+
+                switch ($token) {
+
+                case 'TEMPORARY':
+                    $expr['type'] = 'temp-table';
+                    $expr['exists'] = false;
+                    break;
+
+                case 'TABLE':
+                    $expr['type'] = 'table';
+                    $expr['exists'] = false;
+                    break;
+
+                case 'IF NOT EXISTS':
+                    $expr['exists'] = true;
+                    break;
+
+                default:
+                    break;
+                }
             }
             return $expr;
         }
-        
+
         private function process_table($tokens) {
-            
+
+            $token_count = 0;
             $expr = array();
             foreach ($tokens as $token) {
                 $trim = trim($token);
-                
+
                 if ($trim === "") {
+                    continue;
+                }
+
+                $upper = strtoupper($trim);
+
+                if ($token_count === 0) {
+                    $expr['base_expr'] = $expr['name'] = $trim;
+                    $token_count++;
+                    continue;
+                }
+
+                if ($upper[0] === '(' && substr($upper, -1) === ')') {
+                    $unparsed = $this->split_sql($this->removeParenthesisFromStart($trim));
+                    $expr['col-def'] = $this->process_table_definition($unparsed);
+                    
+                    if (isset($expr['col-def']['like'])) {
+                        $expr['like'] = $expr['col-def']['like'];
+                        unset($expr['col-def']);
+                    }
+                }
+                
+                $token_count++;
+            }
+            return $expr;
+        }
+
+        private function process_table_definition($tokens) {
+
+            $expr = array();
+            $coldef = array();
+            foreach ($tokens as $key => $token) {
+
+                $trim = trim($token);
+                if ($trim === "") {
+                    $coldef[] = $token;
                     continue;
                 }
                 
                 $upper = strtoupper($trim);
                 
+                if (isset($expr['like'])) {
+                    $expr['like'] = $trim;
+                    $coldef = array();
+                    break; 
+                }
                 
-                $expr[] = $token;
+                if (empty($expr) && $upper === 'LIKE') {
+                    $expr['like'] = true;
+                }
+                
+                if ($trim === ',') {
+                    $expr[] = $this->process_column_definition($coldef);
+                    $coldef = array();
+                    continue;
+                }
+                $coldef[] = $token;
+            }
+
+            if (!empty($coldef)) {
+                $expr[] = $this->process_column_definition($coldef);
             }
             return $expr;
         }
-        
-        
+
+        private function process_column_definition($tokens) {
+            // TODO: split column definition
+            return $tokens;
+        }
+
         /* A SET list is simply a list of key = value expressions separated by comma (,).
          This function produces a list of the key/value expressions.
          */
@@ -1383,7 +1480,7 @@ EOREGEX
             $expr = $parseInfo['expr'];
             $expr[] = array('expr_type' => $parseInfo['tokenType'], 'base_expr' => $parseInfo['token'],
                             'sub_tree' => $parseInfo['processed']);
-            
+
             return array('processed' => false, 'expr' => $expr, 'key' => false, 'token' => false, 'tokenType' => "",
                          'prevToken' => $parseInfo['upper'], 'prevTokenType' => $parseInfo['tokenType'],
                          'trim' => false, 'upper' => false);
