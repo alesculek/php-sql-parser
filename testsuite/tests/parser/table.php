@@ -4,7 +4,12 @@ require_once(dirname(__FILE__) . "/../../test-more.php");
 
 $parser = new PHPSQLParser();
 
-$sql = "CREATE TABLE `prefix_quota` (
+$sql = "CREATE TEMPORARY TABLE IF NOT EXISTS `prefix_quota` (
+  LIKE mappe)";
+$p = $parser->parse($sql);
+print_r($p);
+
+$sql = "CREATE TEMPORARY TABLE IF NOT EXISTS `prefix_quota` (
   `id` int(11) NOT NULL auto_increment,
   `sid` int(11) default NULL,
   `name` varchar(255) collate utf8_unicode_ci default NULL,
