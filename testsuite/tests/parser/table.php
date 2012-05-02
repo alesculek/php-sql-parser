@@ -5,11 +5,13 @@ require_once(dirname(__FILE__) . "/../../test-more.php");
 $parser = new PHPSQLParser();
 
 $sql = "CREATE TEMPORARY TABLE IF NOT EXISTS `prefix_quota` (
-  LIKE mappe)";
+  LIKE another_table)";
 $p = $parser->parse($sql);
-print_r($p);
+$expected = getExpectedValue(dirname(__FILE__), 'table1.serialized');
+eq_array($p, $expected, 'create temporary table like an old table');
 
-$sql = "CREATE TEMPORARY TABLE IF NOT EXISTS `prefix_quota` (
+
+$sql = "CREATE TABLE IF NOT EXISTS `prefix_quota` (
   `id` int(11) NOT NULL auto_increment,
   `sid` int(11) default NULL,
   `name` varchar(255) collate utf8_unicode_ci default NULL,
