@@ -104,7 +104,7 @@ Array
 
             [2] => Array
                 (
-                    [expr_type] => function
+                    [expr_type] => aggregate_function
                     [alias] => 
                     [base_expr] => sum
                     [sub_tree] => Array
@@ -122,7 +122,7 @@ Array
 
             [3] => Array
                 (
-                    [expr_type] => function
+                    [expr_type] => aggregate_function
                     [alias] => Array
                         (
                             [as] => 1
@@ -335,8 +335,8 @@ Array
 
                                             [LIMIT] => Array
                                                 (
-                                                    [start] => 
-                                                    [end] => 1
+                                                    [offset] => 
+                                                    [rowcount] => 1
                                                 )
 
                                         )
@@ -358,11 +358,14 @@ Array
 
     [INTO] => Array
         (
-            [0] => @a1
-            [1] => @a2
-            [2] => @a3
-            [3] => outfile
-            [4] => "/xyz"
+            [0] => @
+            [1] => a1
+            [2] => @
+            [3] => a2
+            [4] => @
+            [5] => a3
+            [6] => outfile
+            [7] => "/xyz"
         )
 
     [FROM] => Array
@@ -739,7 +742,7 @@ Array
         (
             [0] => Array
                 (
-                    [expr_type] => function
+                    [expr_type] => aggregate_function
                     [base_expr] => sum
                     [sub_tree] => Array
                         (
@@ -790,8 +793,8 @@ Array
 
     [LIMIT] => Array
         (
-            [start] => 0
-            [end] => 10
+            [offset] => 0
+            [rowcount] => 10
         )
 
 )
