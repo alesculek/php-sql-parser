@@ -910,13 +910,13 @@ EOREGEX
                 if ($upper[0] === '(' && substr($upper, -1) === ')') {
                     $unparsed = $this->split_sql($this->removeParenthesisFromStart($trim));
                     $expr['col-def'] = $this->process_table_definition($unparsed);
-                    
+
                     if (isset($expr['col-def']['like'])) {
                         $expr['like'] = $expr['col-def']['like'];
                         unset($expr['col-def']);
                     }
                 }
-                
+
                 $token_count++;
             }
             return $expr;
@@ -933,19 +933,19 @@ EOREGEX
                     $coldef[] = $token;
                     continue;
                 }
-                
+
                 $upper = strtoupper($trim);
-                
+
                 if (isset($expr['like'])) {
                     $expr['like'] = $trim;
                     $coldef = array();
-                    break; 
+                    break;
                 }
-                
+
                 if (empty($expr) && $upper === 'LIKE') {
                     $expr['like'] = true;
                 }
-                
+
                 if ($trim === ',') {
                     $expr[] = $this->process_column_definition($coldef);
                     $coldef = array();
@@ -960,8 +960,95 @@ EOREGEX
             return $expr;
         }
 
-        private function process_column_definition($tokens) {
-            // TODO: split column definition
+        // TODO: some things to implement
+        private function process_column_definition($coldef) {
+            $tokens = $this->split_sql($coldef);
+            $expr = array();
+            $tokenType = "";
+
+            foreach ($tokens as $key => $token) {
+
+                $trim = trim($token);
+                if ($trim === "") {
+                    continue;
+                }
+
+                $upper = strtoupper($trim);
+
+                switch ($upper) {
+
+                case "NOT":
+                case "NULL":
+                case "DEFAULT":
+                case "AUTO_INCREMENT":
+                case "UNIQUE":
+                case "KEY":
+                case "PRIMARY":
+                case "COMMENT":
+                    break;
+
+                case "REFERENCES":
+                case "ASC":
+                case "DESC":
+                case "MATCH":
+                case "ON":
+                    break;
+
+                case "ASCII":
+                case "UNICODE":
+                case "ZEROFILL":
+                case "UNSIGNED":
+                case "BINARY":
+                    if ($prevTokenType === "datatype") {
+                        if ($expr['datatype']['subtype'] === false) {
+                            $expr['datatype']['subtype'] = array();
+                        }
+                        $expr['datatype']['subtype'][] = strtolower($upper);
+                    }
+                    break;
+
+                default:
+                    if ($prevTokenType === "") {
+                        $expr['name'] = $token;
+                        $tokenType = "colname";
+                    }
+
+                    if ($prevTokenType === "colname") {
+                        $expr['datatype'] = array("type" => $upper, 'subtype' => false, 'values' => false,
+                                                  'length' => false, 'decimals' => false);
+                        $tokenType = "datatype";
+                    }
+
+                    break;
+                }
+
+                if ($prevTokenType === "datatype" && $upper[0] === "(") {
+
+                    $tmptokens = $this->split_sql($this->removeParenthesisFromStart($token));
+                    foreach ($tmptokens as $k => $v) {
+                        if (trim($v) === ',' || trim($v) === "") {
+                            unset($tmptokens[$k]);
+                        }
+                    }
+
+                    $tmptokens = array_values($tmptokens);
+
+                    if (in_array($expr['datatype']['type'], array("SET", "ENUM"))) {
+                        $expr['datatype']['values'] = $tmptokens;
+                    } else {
+                        if (isset($tmptokens[0])) {
+                            $expr['datatype']['length'] = $tmptokens[0];
+                        }
+                        if (isset($tmptokens[1])) {
+                            $expr['datatype']['decimals'] = $tmptokens[1];
+                        }
+                    }
+                }
+
+                // shift $tokenType into prevTokenType
+
+            }
+
             return $tokens;
         }
 
@@ -1526,7 +1613,7 @@ EOREGEX
 
                         $tmptokens = $this->split_sql($this->removeParenthesisFromStart($parseInfo['trim']));
                         foreach ($tmptokens as $k => $v) {
-                            if (trim($v) == ',') {
+                            if (trim($v) === ',') {
                                 unset($tmptokens[$k]);
                             }
                         }
@@ -1541,11 +1628,11 @@ EOREGEX
                         $parseInfo['prevTokenType'] = $parseInfo['prevToken'] = "";
                     }
 
-                    if ($parseInfo['prevToken'] == 'IN') {
+                    if ($parseInfo['prevToken'] === 'IN') {
 
                         $tmptokens = $this->split_sql($this->removeParenthesisFromStart($parseInfo['trim']));
                         foreach ($tmptokens as $k => $v) {
-                            if (trim($v) == ',') {
+                            if (trim($v) === ',') {
                                 unset($tmptokens[$k]);
                             }
                         }
@@ -1556,7 +1643,7 @@ EOREGEX
                         $parseInfo['tokenType'] = "in-list";
                     }
 
-                    if ($parseInfo['prevToken'] == 'AGAINST') {
+                    if ($parseInfo['prevToken'] === 'AGAINST') {
 
                         $tmptokens = $this->split_sql($this->removeParenthesisFromStart($parseInfo['trim']));
                         if (count($tmptokens) > 1) {
