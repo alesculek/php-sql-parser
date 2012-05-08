@@ -817,10 +817,10 @@ EOREGEX
                 $out['UPDATE'] = $this->process_from($out['UPDATE']);
             }
             if (!empty($out['GROUP'])) {
-                $out['GROUP'] = $this->process_group($out['GROUP'], $out['SELECT']);
+                $out['GROUP'] = $this->process_group($out['GROUP'], isset($out['SELECT']) ? $out['SELECT'] : array());
             }
             if (!empty($out['ORDER'])) {
-                $out['ORDER'] = $this->process_order($out['ORDER'], $out['SELECT']);
+                $out['ORDER'] = $this->process_order($out['ORDER'], isset($out['SELECT']) ? $out['SELECT'] : array());
             }
             if (!empty($out['LIMIT'])) {
                 $out['LIMIT'] = $this->process_limit($out['LIMIT']);
@@ -969,7 +969,7 @@ EOREGEX
                                               'length' => false, 'decimals' => false), 'unique' => false,
                           'primarykey' => false, 'references' => false, 'autoinc' => false, 'comment' => false,
                           'default' => false, 'nullable' => true);
-            
+
             $tokenType = "";
             $prevTokenType = "";
 
@@ -1097,6 +1097,7 @@ EOREGEX
                             $expr['datatype']['subtype'] = array();
                         }
                         $expr['datatype']['subtype'][] = strtolower($upper);
+                        continue 2;
                     }
                     break;
 
@@ -1152,11 +1153,8 @@ EOREGEX
 
                 if ($prevTokenType === "references") {
                     if ($upper[0] === "(") {
-
-                        $tmptokens = $this->split_sql($this->removeParenthesisFromStart($token));
-
-                        // TODO: index columns
-
+                        $expr['references']['columns'] = $this->process_reference_columns(
+                                $this->removeParenthesisFromStart($token));
                         $tokentype = "references";
                     }
                 }
@@ -1168,6 +1166,14 @@ EOREGEX
             }
 
             return $expr;
+        }
+
+        private function process_reference_columns($coldef) {
+            $tokens = $this->split_sql($coldef);
+
+            // TODO: process column definitions within a references clause
+
+            return array();
         }
 
         /* A SET list is simply a list of key = value expressions separated by comma (,).
@@ -1604,7 +1610,7 @@ EOREGEX
             return $out;
         }
 
-        private function process_group(&$tokens, &$select) {
+        private function process_group($tokens, $select) {
             $out = array();
             $parseInfo = $this->initParseInfoForOrder();
 
