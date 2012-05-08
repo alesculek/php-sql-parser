@@ -962,9 +962,16 @@ EOREGEX
 
         // TODO: some things to implement
         private function process_column_definition($coldef) {
-            $tokens = $this->split_sql($coldef);
-            $expr = array();
+            $tokens = $coldef;
+
+            $expr = array('name' => false,
+                          'datatype' => array("type" => false, 'subtype' => false, 'values' => false,
+                                              'length' => false, 'decimals' => false), 'unique' => false,
+                          'primarykey' => false, 'references' => false, 'autoinc' => false, 'comment' => false,
+                          'default' => false, 'nullable' => true);
+            
             $tokenType = "";
+            $prevTokenType = "";
 
             foreach ($tokens as $key => $token) {
 
@@ -977,21 +984,107 @@ EOREGEX
 
                 switch ($upper) {
 
-                case "NOT":
-                case "NULL":
-                case "DEFAULT":
-                case "AUTO_INCREMENT":
                 case "UNIQUE":
+                    $expr['unique'] = true;
+                    $tokenType = "unique";
+                    continue 2;
+
                 case "KEY":
+                # ignore it after unique keyword
+                    if ($tokenType === "unique") {
+                        continue 2;
+                    }
+                    $expr['primarykey'] = true;
+                    break;
+
                 case "PRIMARY":
+                    $tokenType = "primary";
+                    continue 2;
+
                 case "COMMENT":
+                case "DEFAULT":
+                    $tokenType = strtolower($upper);
+                    continue 2;
+
+                case "AUTO_INCREMENT":
+                    $expr['autoinc'] = true;
+                    break;
+
+                case "NOT":
+                    $tokenType = "nullable";
+                    continue 2;
+
+                case "NULL":
+                    if ($tokenType === "nullable") {
+                        $expr['nullable'] = false;
+                    }
+                    if ($tokenType === "default") {
+                        $expr['default'] = $trim;
+                    }
+                    if ($prevTokenType === "refopt") {
+                        // SET NULL of ON UPDATE or ON DELETE
+                        $expr['references'][$tokenType] = "set null";
+                    }
+                    # TODO: other occurences?
                     break;
 
                 case "REFERENCES":
+                    $tokenType = "references";
+                    $expr['references'] = array('table' => false, 'columns' => false, 'match' => false,
+                                                'on-delete' => false, 'on-update' => false);
+                    break;
+
+                case "MATCH":
+                    if ($tokenType === "references") {
+                        $tokenType = "match";
+                        continue 2;
+                    }
+                    break;
+
+                case "FULL":
+                case "PARTIAL":
+                case "SIMPLE":
+                    if ($tokenType === "match") {
+                        $expr['references']['match'] = $upper;
+                        $tokenType = "references";
+                        continue 2;
+                    }
+                    break;
+
                 case "ASC":
                 case "DESC":
-                case "MATCH":
+                // TODO: index col
+                    break;
+
                 case "ON":
+                    $tokenType = "refopt";
+                    break;
+
+                case "DELETE":
+                case "UPDATE":
+                    if ($prevTokenType === "refopt") {
+                        $tokenType = "on-" . strtolower($upper);
+                    }
+                    continue 2;
+
+                case "RESTRICT":
+                case "CASCADE":
+                    if ($prevTokenType === "refopt") {
+                        $expr['references'][$tokenType] = $trim;
+                    }
+                    break;
+
+                case "ACTION":
+                    if ($prevTokenType === "refopt") {
+                        $expr['references'][$tokenType] = "no action";
+                    }
+                    break;
+
+                case "NO":
+                    if ($prevTokenType === "refopt") {
+                        continue 2;
+                    }
+                    # TODO: others?
                     break;
 
                 case "ASCII":
@@ -1009,14 +1102,26 @@ EOREGEX
 
                 default:
                     if ($prevTokenType === "") {
-                        $expr['name'] = $token;
+                        $expr['name'] = $trim;
                         $tokenType = "colname";
                     }
 
                     if ($prevTokenType === "colname") {
-                        $expr['datatype'] = array("type" => $upper, 'subtype' => false, 'values' => false,
-                                                  'length' => false, 'decimals' => false);
+                        $expr['datatype']['type'] = $trim;
                         $tokenType = "datatype";
+                    }
+
+                    if ($tokenType === "comment") {
+                        $expr['comment'] = $trim;
+                    }
+
+                    if ($tokenType === "default") {
+                        $expr['default'] = $trim;
+                    }
+
+                    if ($prevTokenType === "references") {
+                        $expr['references']['table'] = $trim;
+                        continue 2;
                     }
 
                     break;
@@ -1045,11 +1150,24 @@ EOREGEX
                     }
                 }
 
-                // shift $tokenType into prevTokenType
+                if ($prevTokenType === "references") {
+                    if ($upper[0] === "(") {
 
+                        $tmptokens = $this->split_sql($this->removeParenthesisFromStart($token));
+
+                        // TODO: index columns
+
+                        $tokentype = "references";
+                    }
+                }
+
+                if ($tokenType !== "") {
+                    $prevTokenType = $tokenType;
+                    $tokenType = "";
+                }
             }
 
-            return $tokens;
+            return $expr;
         }
 
         /* A SET list is simply a list of key = value expressions separated by comma (,).
