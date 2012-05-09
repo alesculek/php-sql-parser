@@ -892,6 +892,7 @@ EOREGEX
 
             $token_count = 0;
             $expr = array();
+
             foreach ($tokens as $token) {
                 $trim = trim($token);
 
@@ -909,12 +910,22 @@ EOREGEX
 
                 if ($upper[0] === '(' && substr($upper, -1) === ')') {
                     $unparsed = $this->split_sql($this->removeParenthesisFromStart($trim));
-                    $expr['col-def'] = $this->process_table_definition($unparsed);
+                    $coldef = $this->process_table_definition($unparsed);
 
-                    if (isset($expr['col-def']['like'])) {
-                        $expr['like'] = $expr['col-def']['like'];
-                        unset($expr['col-def']);
-                    }
+                    foreach ($coldef as $k => $v) {
+						if (isset($v['type'])) {
+							$type = $v['type'];
+							unset($v['type']);
+							if ($type === "column") {
+								$expr['col-def'][] = $v;
+							} else {
+								if (!isset($expr[$type])) {
+									$expr[$type] = array();
+								}
+								$expr[$type][] = $v;
+							}
+						}
+					}
                 }
 
                 $token_count++;
@@ -930,41 +941,277 @@ EOREGEX
 
                 $trim = trim($token);
                 if ($trim === "") {
-                    $coldef[] = $token;
+                    $def[] = $token;
                     continue;
                 }
 
                 $upper = strtoupper($trim);
 
-                if (isset($expr['like'])) {
-                    $expr['like'] = $trim;
-                    $coldef = array();
+                $last = end($expr);
+                if (($last !== false) && ($last['type'] === 'like')) {
+                	$last = array_pop($expr);
+                    $last['table'] = $trim;
+                    $expr[] = $last;
+                    $def = array();
                     break;
                 }
 
                 if (empty($expr) && $upper === 'LIKE') {
-                    $expr['like'] = true;
+                    $expr[] = array('type'=>'like');
                 }
 
                 if ($trim === ',') {
-                    $expr[] = $this->process_column_definition($coldef);
-                    $coldef = array();
+                	$expr[] = $this->process_create_definition($def);
+                    $def = array();
                     continue;
                 }
-                $coldef[] = $token;
+                $def[] = $token;
             }
 
-            if (!empty($coldef)) {
-                $expr[] = $this->process_column_definition($coldef);
+            if (!empty($def)) {
+                $expr[] = $this->process_create_definition($def);
             }
             return $expr;
         }
 
+        # it can start with
+        # CONSTRAINT, PRIMARY, FOREIGN, FULLTEXT, KEY, INDEX, UNIQUE,
+        # SPATIAL, CHECK, and some others token, which means column_def
+        
+        # FIXME: I should try to parse some sub-clauses within functions,
+        # which get a subset of $tokens
+        private function process_create_definition($def) {
+
+        	$tokens = $def;
+        	$expr = array();
+            $tokenType = "";
+            $prevTokenType = "";
+            $constraint = false;
+            
+            foreach ($tokens as $key => $token) {
+
+                $trim = trim($token);
+                if ($trim === "") {
+                    continue;
+                }
+
+                $upper = strtoupper($trim);
+        	
+                switch ($upper) {
+        		case "CONSTRAINT":
+        			$tokenType = "constraint";
+        			$constraint = false;
+        			continue 2;
+        			
+        		case "PRIMARY":
+        			$tokenType = "primary";
+        			if ($constraint === false) {
+        				#TODO: set default name
+        			}
+        			$expr = array('type'=>'primarykey', 'symbol'=>$constraint);
+          			continue 2;
+        			
+        		case "FOREIGN":
+        			$tokenType = "foreign";
+        			if ($constraint === false) {
+        				#TODO: set default name
+        			}
+        			$expr = array('type'=>'foreignkey', 'symbol'=>$constraint);
+        			continue 2;
+        			
+        		case "FULLTEXT":
+        			$tokenType = "fulltext";
+        			$expr = array('type'=>'fulltext', 'symbol' => false, 'parser' => false);
+        			continue 2;
+        		
+        		case "WITH":
+       				if ($tokenType === "fulltext") {
+       					continue 2; # ignore it, it should followed by PARSER	
+       				}
+					# TODO: others?
+       				break;
+        				
+        		case "PARSER":
+        			if ($tokenType === "fulltext") {
+        				$tokenType = "parser";
+        				continue 2;
+        			}
+        			break;
+        					
+        		case "KEY":
+        			if (in_array($tokenType, array("primary", "foreign"))) {
+        				continue 2; # ignore
+        			}
+        			$tokenType = "key";
+        			$expr=array('type'=>'key');
+        			continue 2;
+        			
+        		case "INDEX":
+        			if (in_array($tokenType, array("unique", "fulltext", "spatial"))) {
+        				continue 2; # ignore
+        			}
+        			$tokenType = "index";
+        			$expr = array('type'=>'index', 'symbol' => false);
+        			continue 2;
+        			
+        		case "UNIQUE":
+        			$tokenType = "unique";
+        			if ($constraint === false) {
+        				#TODO: set default name
+        			}
+        			$expr = array('type'=>'unique', 'symbol' => $constraint);
+        			continue 2;
+        			
+        		case "SPATIAL":
+        			$tokenType = "spatial";
+        			$expr = array('type'=>'spatial', 'symbol' => false);
+        			continue 2;
+        			
+        		case "CHECK":
+					$tokenType = "check";
+					$expr=array('type'=>'check');
+					continue 2;
+					
+        		case "REFERENCES":
+        			$tokenType = "reference";
+                    $expr['references'] = array('table' => false, 'columns' => false, 'match' => false,
+                                                'on-delete' => false, 'on-update' => false);
+        			continue 2;
+
+        		case "MATCH":
+                    if ($tokenType === "references") {
+                        $tokenType = "match";
+                        continue 2;
+                    }
+                    # TODO: some other occurrences ?
+                    break;
+        			
+                case "FULL":
+                case "PARTIAL":
+                case "SIMPLE":
+                    if ($tokenType === "match") {
+                        $expr['references']['match'] = $upper;
+                        $tokenType = "references";
+                        continue 2;
+                    }
+                    break;
+                    
+                case "ON":
+                    $tokenType = "refopt";
+                    break;
+                    
+                case "DELETE":
+                case "UPDATE":
+                    if ($prevTokenType === "refopt") {
+                        $tokenType = "on-" . strtolower($upper);
+                    }
+                    continue 2;
+
+                case "RESTRICT":
+                case "CASCADE":
+                    if ($prevTokenType === "refopt") {
+                        $expr['references'][$tokenType] = $trim;
+                    }
+                    break;
+
+                case "ACTION":
+                    if ($prevTokenType === "refopt") {
+                        $expr['references'][$tokenType] = "no action";
+                    }
+                    break;
+
+                case "NO":
+                    if ($prevTokenType === "refopt") {
+                    	# ignore it, it should followed by ACTION
+                        continue 2;
+                    }
+                    # TODO: others?
+                    break;
+                    
+                default:
+        			if ($tokenType === "") {
+        				return $this->process_column_definition($def);
+        			}
+        			if ($tokenType === "constraint") {
+        				$constraint = $trim; # store the optional name
+        			}
+        			if ($tokenType === "parser") {
+        				$expr['parser'] = $trim; # store the parser name
+        			}
+        			if ($tokenType === "key") {
+        				if ($upper[0] === "(") {
+        					# TODO: the key index column names
+        				} else {
+        					# TODO: how can I differ between index-type and index-name?
+        					$expr['index-name'] = $trim;
+        				}
+        				continue 2;
+        			}
+        			if (in_array($tokenType, array("unique", "index"))) {
+        				if ($upper[0] === "(") {
+        					# TODO: the index column names
+        				} else {
+        					# TODO: how can I differ between index-type and index-name?
+        					$expr['index-name'] = $trim;
+        				}
+        				continue 2;
+           			}
+        			if ($tokenType === "foreign") {
+        				if ($upper[0] === "(") {
+        					# TODO: the foreign key index column names
+        				} else {
+        					$expr['index-name'] = $trim;
+        				}
+        				continue 2;
+        			}
+        			if (in_array($tokenType, array("spatial", "fulltext"))) {
+        				if ($upper[0] === "(") {
+        					# TODO: the index col names
+        				} else {
+        					$expr['index-name'] = $trim;
+        				}
+        				continue 2;
+        			}
+        			if ($tokenType === "primary") {
+        				if ($upper[0] === "(") {
+        					# TODO: the index col names
+        				} else {
+        					$expr['index-type'] = $trim;
+        				}
+        				continue 2;
+	       			}
+        			if ($tokenType === "check" && $upper[0] === "(") {
+        				$expr['expression'] = $this->process_expr_list($this->split_sql($this->removeParenthesisFromStart($trim)));
+        			}
+        			if ($tokenType === "reference") {
+        				if ($upper[0] === "(") {
+                        	$expr['references']['columns'] = $this->process_reference_columns(
+                                $this->removeParenthesisFromStart($token));
+        				} else {
+        					$expr['references']['table'] = $trim;
+        				}
+        				continue 2;
+        			}
+        			break;
+        		}
+        		
+                if ($tokenType !== "") {
+                    $prevTokenType = $tokenType;
+                    $tokenType = "";
+                }
+            }
+
+            return $expr;
+        }
+        
         // TODO: some things to implement
         private function process_column_definition($coldef) {
             $tokens = $coldef;
 
-            $expr = array('name' => false,
+            # maybe we should only set standard properties
+            # so we can prevent wrong info like primarykey = false
+            # and a primary key constraint with this column
+            $expr = array('type'=>'column', 'name' => false,
                           'datatype' => array("type" => false, 'subtype' => false, 'values' => false,
                                               'length' => false, 'decimals' => false), 'unique' => false,
                           'primarykey' => false, 'references' => false, 'autoinc' => false, 'comment' => false,
@@ -985,8 +1232,8 @@ EOREGEX
                 switch ($upper) {
 
                 case "UNIQUE":
-                    $expr['unique'] = true;
-                    $tokenType = "unique";
+                	$tokenType = "unique";
+                	$expr['unique'] = true;
                     continue 2;
 
                 case "KEY":
@@ -994,11 +1241,12 @@ EOREGEX
                     if ($tokenType === "unique") {
                         continue 2;
                     }
+                    $tokenType = "primary";
                     $expr['primarykey'] = true;
                     break;
 
                 case "PRIMARY":
-                    $tokenType = "primary";
+                	# ignore it, it should followed by KEY!
                     continue 2;
 
                 case "COMMENT":
@@ -1032,7 +1280,7 @@ EOREGEX
                     $tokenType = "references";
                     $expr['references'] = array('table' => false, 'columns' => false, 'match' => false,
                                                 'on-delete' => false, 'on-update' => false);
-                    break;
+                    continue 2;
 
                 case "MATCH":
                     if ($tokenType === "references") {
@@ -1057,7 +1305,10 @@ EOREGEX
                     break;
 
                 case "ON":
-                    $tokenType = "refopt";
+                	if ($tokenType === "references") {
+                    	$tokenType = "refopt";
+                	}
+                	# TODO: others?
                     break;
 
                 case "DELETE":
@@ -1082,7 +1333,7 @@ EOREGEX
 
                 case "NO":
                     if ($prevTokenType === "refopt") {
-                        continue 2;
+                        continue 2; # ignore it, it should followed by ACTION
                     }
                     # TODO: others?
                     break;
@@ -1120,11 +1371,15 @@ EOREGEX
                         $expr['default'] = $trim;
                     }
 
-                    if ($prevTokenType === "references") {
-                        $expr['references']['table'] = $trim;
+                    if ($tokenType === "references") {
+                    	if ($upper[0] === "(") {
+                        	$expr['references']['columns'] = $this->process_reference_columns(
+                                $this->removeParenthesisFromStart($token));
+                    	} else {
+                        	$expr['references']['table'] = $trim;
+                    	}
                         continue 2;
                     }
-
                     break;
                 }
 
@@ -1148,14 +1403,6 @@ EOREGEX
                         if (isset($tmptokens[1])) {
                             $expr['datatype']['decimals'] = $tmptokens[1];
                         }
-                    }
-                }
-
-                if ($prevTokenType === "references") {
-                    if ($upper[0] === "(") {
-                        $expr['references']['columns'] = $this->process_reference_columns(
-                                $this->removeParenthesisFromStart($token));
-                        $tokentype = "references";
                     }
                 }
 

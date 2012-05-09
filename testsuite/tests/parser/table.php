@@ -22,7 +22,6 @@ $sql = "CREATE TABLE IF NOT EXISTS `prefix_quota` (
   PRIMARY KEY  (`id`)
 )";
 $p = $parser->parse($sql);
-print_r($p);
 
 
 $sql = "CREATE TABLE `prefix_sessions`(
@@ -37,4 +36,3 @@ $sql = "CREATE TABLE `prefix_sessions`(
       INDEX sess2_expireref( expireref )
 )";
 $p = $parser->parse($sql);
-print_r($p);
