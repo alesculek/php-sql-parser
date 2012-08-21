@@ -26,7 +26,7 @@ print_r($parsed);
 
 == Trying the examples ==
 The best way to see how to use the parser is to look at the extensive examples, which you can get here:
-   # Download the SQL parser file: http://code.google.com/p/php-sql-parser/source/browse/tags/2012-07-03/example.php
+   # Download the example file: http://code.google.com/p/php-sql-parser/source/browse/tags/2012-07-03/example.php
    # Place it into the same location of php-sql-parse.php (if it isn't in your include path)
    # Execute the example:
 {{{
