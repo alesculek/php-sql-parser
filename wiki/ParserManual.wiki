@@ -4,9 +4,9 @@
 = PHP-SQL-Parser Manual =
 
 == How to integrate php-sql-parse into your application ==
-The parser is a self contained class.  It does not require any PECL packages.  
+The parser comes with multiple PHP files, which are downloadable from http://code.google.com/p/php-sql-parser/downloads/list (stable version).  It does not require any PECL packages. The latest development version is accessible on http://code.google.com/p/php-sql-parser/source/browse/trunk.
 ----
-   # Download the SQL parser file: http://code.google.com/p/php-sql-parser/source/browse/tags/2012-07-03/php-sql-parser.php and place it into your include directory.
+   # Download the SQL parser from: http://code.google.com/p/php-sql-parser/downloads/list and unzip it into your include directory.
    # add *require_once*('php-sql-parser.php') to your application
    # Use the parser:
 {{{
@@ -14,7 +14,6 @@ $parser = new PHPSQLParser();
 $parsed = $parser->parse($sql);
 print_r($parsed);
 }}}
-
    # it is also possible to generate keyword positions during the parser step
    # for every base_expr entry the parser stores the position within the original SQL string
 {{{
@@ -26,8 +25,8 @@ print_r($parsed);
 
 == Trying the examples ==
 The best way to see how to use the parser is to look at the extensive examples, which you can get here:
-   # Download the example file: http://code.google.com/p/php-sql-parser/source/browse/tags/2012-07-03/example.php
-   # Place it into the same location of php-sql-parse.php (if it isn't in your include path)
+   # Download the SQL parser from: http://code.google.com/p/php-sql-parser/downloads/list and unzip it into your include directory.
+   # There is a file example.php, that contains a lot of examples. More examples you can find within the /test folder.
    # Execute the example:
 {{{
 php example.php
