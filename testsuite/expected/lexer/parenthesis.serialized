@@ -1,0 +1,1 @@
+a:6:{i:0;C:5:"Token":13:{s:6:"SELECT";}i:1;C:5:"Token":8:{s:1:" ";}i:2;C:5:"Token":21:{s:13:"(colA * colB)";}i:3;C:5:"Token":8:{s:1:",";}i:4;C:5:"Token":8:{s:1:" ";}i:5;C:5:"Token":35:{s:27:"("a" || "(bcd") From test t";}}

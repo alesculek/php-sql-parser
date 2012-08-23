@@ -33,6 +33,11 @@
 require_once(dirname(__FILE__) . '/parser-utils.php');
 require_once(dirname(__FILE__) . '/lexer-splitter.php');
 require_once(dirname(__FILE__) . '/exceptions.php');
+require_once(dirname(__FILE__) . '/tokens/token.php');
+require_once(dirname(__FILE__) . '/tokens/comment.php');
+require_once(dirname(__FILE__) . '/tokens/string-literal.php');
+require_once(dirname(__FILE__) . '/tokens/hex-string-literal.php');
+require_once(dirname(__FILE__) . '/tokens/binary-string-literal.php');
 
 /**
  * This class splits the SQL string into little parts, which the parser can
@@ -54,7 +59,7 @@ class PHPSQLLexer extends PHPSQLParserUtils {
             throw new InvalidParameterException($sql);
         }
 
-        $tokens = array();
+        $tokenList = array();
         $token = "";
 
         $splitLen = $this->splitters->getMaxLengthOfSplitter();
@@ -69,10 +74,10 @@ class PHPSQLLexer extends PHPSQLParserUtils {
                 if ($this->splitters->isSplitter($substr)) {
 
                     if ($token !== "") {
-                        $tokens[] = $token;
+                        $tokenList[] = new Token($token);
                     }
 
-                    $tokens[] = $substr;
+                    $tokenList[] = new Token($substr);
                     $pos += $i;
                     $token = "";
 
@@ -85,81 +90,82 @@ class PHPSQLLexer extends PHPSQLParserUtils {
         }
 
         if ($token !== "") {
-            $tokens[] = $token;
+            $tokenList[] = new Token($token);
         }
 
-        $tokens = $this->concatEscapeSequences($tokens);
-        $tokens = $this->balanceBackticks($tokens);
-        $tokens = $this->concatColReferences($tokens);
-        $tokens = $this->balanceParenthesis($tokens);
-        $tokens = $this->balanceMultilineComments($tokens);
-        $tokens = $this->concatInlineComments($tokens);
-        $tokens = $this->concatUserDefinedVariables($tokens);
-        return $tokens;
+        $tokenList = $this->concatEscapeSequences($tokenList);
+        $tokenList = $this->balanceBackticks($tokenList);
+        $tokenList = $this->concatColReferences($tokenList);
+        $tokenList = $this->balanceParenthesis($tokenList);
+        $tokenList = $this->balanceMultilineComments($tokenList);
+        $tokenList = $this->concatInlineComments($tokenList);
+        $tokenList = $this->concatUserDefinedVariables($tokenList);
+        return $tokenList;
     }
 
-    private function concatUserDefinedVariables($tokens) {
+    private function concatUserDefinedVariables($tokenList) {
         $i = 0;
-        $cnt = count($tokens);
+        $cnt = count($tokenList);
         $userdef = false;
 
         while ($i < $cnt) {
 
-            if (!isset($tokens[$i])) {
+            if (!isset($tokenList[$i])) {
                 $i++;
                 continue;
             }
 
-            $token = $tokens[$i];
+            $token = $tokenList[$i];
 
             if ($userdef !== false) {
-                $tokens[$userdef] .= $token;
-                unset($tokens[$i]);
-                if ($token !== "@") {
+                $tokenList[$userdef]->add($token);
+                unset($tokenList[$i]);
+                if ($token->get() !== "@") {
                     $userdef = false;
                 }
             }
 
-            if ($userdef === false && $token === "@") {
+            if ($userdef === false && $token->get() === "@") {
                 $userdef = $i;
+                $tokenList[$userdef] = new Variable($token->get());
             }
 
             $i++;
         }
 
-        return array_values($tokens);
+        return array_values($tokenList);
     }
 
-    private function concatInlineComments($tokens) {
+    private function concatInlineComments($tokenList) {
 
         $i = 0;
-        $cnt = count($tokens);
+        $cnt = count($tokenList);
         $comment = false;
 
         while ($i < $cnt) {
 
-            if (!isset($tokens[$i])) {
+            if (!isset($tokenList[$i])) {
                 $i++;
                 continue;
             }
 
-            $token = $tokens[$i];
+            $token = $tokenList[$i];
 
             if ($comment !== false) {
-                if ($token === "\n" || $token === "\r\n") {
+                if ($token->isEOL()) {
                     $comment = false;
                 } else {
-                    unset($tokens[$i]);
-                    $tokens[$comment] .= $token;
+                    unset($tokenList[$i]);
+                    $tokenList[$comment]->add($token);
                 }
             }
 
-            if (($comment === false) && ($token === "-")) {
-                if (isset($tokens[$i + 1]) && $tokens[$i + 1] === "-") {
+            if (($comment === false) && ($token->get() === "-")) {
+                if (isset($tokenList[$i + 1]) && $tokenList[$i + 1]->get() === "-") {
                     $comment = $i;
-                    $tokens[$i] = "--";
+                    $tokenList[$i] = new Comment("--");
                     $i++;
-                    unset($tokens[$i]);
+                    unset($tokenList[$i]);
                     continue;
                 }
             }
@@ -167,99 +173,97 @@ class PHPSQLLexer extends PHPSQLParserUtils {
             $i++;
         }
 
-        return array_values($tokens);
+        return array_values($tokenList);
     }
 
-    private function balanceMultilineComments($tokens) {
+    private function balanceMultilineComments($tokenList) {
 
         $i = 0;
-        $cnt = count($tokens);
+        $cnt = count($tokenList);
         $comment = false;
 
         while ($i < $cnt) {
 
-            if (!isset($tokens[$i])) {
+            if (!isset($tokenList[$i])) {
                 $i++;
                 continue;
             }
 
-            $token = $tokens[$i];
+            $token = $tokenList[$i];
 
             if ($comment !== false) {
-                unset($tokens[$i]);
-                $tokens[$comment] .= $token;
-                if ($token === "*" && isset($tokens[$i + 1]) && $tokens[$i + 1] === "/") {
-                    unset($tokens[$i + 1]);
-                    $tokens[$comment] .= "/";
+                unset($tokenList[$i]);
+                $tokenList[$comment]->add($token);
+                if ($token->get() === "*" && isset($tokenList[$i + 1]) && $tokenList[$i + 1]->get() === "/") {
+                    $tokenList[$comment]->add($tokenList[$i + 1]);
+                    unset($tokenList[$i + 1]);
                     $comment = false;
                 }
             }
 
-            if (($comment === false) && ($token === "/")) {
-                if (isset($tokens[$i + 1]) && $tokens[$i + 1] === "*") {
+            if (($comment === false) && ($token->get() === "/")) {
+                if (isset($tokenList[$i + 1]) && $tokenList[$i + 1]->get() === "*") {
                     $comment = $i;
-                    $tokens[$i] = "/*";
+                    $tokenList[$i] = new Comment("/*");
                     $i++;
-                    unset($tokens[$i]);
+                    unset($tokenList[$i]);
                     continue;
                 }
             }
 
             $i++;
         }
-        return array_values($tokens);
+        return array_values($tokenList);
     }
 
-    private function isBacktick($token) {
-        return ($token === "'" || $token === "\"" || $token === "`");
-    }
-
-    private function balanceBackticks($tokens) {
+    // TODO: see http://dev.mysql.com/doc/refman/5.1/de/string-syntax.html
+    // there are a lot of possibilities how backticks have beed combined
+    private function balanceBackticks($tokenList) {
         $i = 0;
-        $cnt = count($tokens);
+        $cnt = count($tokenList);
         while ($i < $cnt) {
 
-            if (!isset($tokens[$i])) {
+            if (!isset($tokenList[$i])) {
                 $i++;
                 continue;
             }
 
-            $token = $tokens[$i];
+            $token = $tokenList[$i];
 
-            if ($this->isBacktick($token)) {
-                $tokens = $this->balanceCharacter($tokens, $i, $token);
+            if ($token->isBacktick()) {
+                $tokenList = $this->balanceCharacter($tokenList, $i, $token);
             }
 
             $i++;
         }
 
-        return $tokens;
+        return $tokenList;
     }
 
     # backticks are not balanced within one token, so we have
     # to re-combine some tokens
-    private function balanceCharacter($tokens, $idx, $char) {
+    private function balanceCharacter($tokenList, $idx, $char) {
 
-        $token_count = count($tokens);
+        $token_count = count($tokenList);
         $i = $idx + 1;
         while ($i < $token_count) {
 
-            if (!isset($tokens[$i])) {
+            if (!isset($tokenList[$i])) {
                 $i++;
                 continue;
             }
 
-            $token = $tokens[$i];
-            $tokens[$idx] .= $token;
-            unset($tokens[$i]);
+            $token = $tokenList[$i];
+            $tokenList[$idx]->add($token);
+            unset($tokenList[$i]);
 
-            if ($token === $char) {
+            if ($token->get() === $char) {
                 break;
             }
 
             $i++;
         }
-        return array_values($tokens);
+        return array_values($tokenList);
     }
 
     /*
@@ -268,46 +272,49 @@ class PHPSQLLexer extends PHPSQLParserUtils {
      * 
      * does the token starts with a dot?
      * concat it with the previous token
+     * 
+     * TODO: check decimal value constants like 1.02
      */
-    private function concatColReferences($tokens) {
+    private function concatColReferences($tokenList) {
 
-        $cnt = count($tokens);
+        $cnt = count($tokenList);
         $i = 0;
         while ($i < $cnt) {
 
-            if (!isset($tokens[$i])) {
+            if (!isset($tokenList[$i])) {
                 $i++;
                 continue;
             }
 
-            if ($tokens[$i][0] === ".") {
+            if ($tokenList[$i]->startsWith(".")) {
 
                 // concat the previous tokens, till the token has been changed
                 $k = $i - 1;
-                $len = strlen($tokens[$i]);
-                while (($k >= 0) && ($len == strlen($tokens[$i]))) {
-                    if (!isset($tokens[$k])) { # FIXME: this can be wrong if we have schema . table . column
+                $len = strlen($tokenList[$i]->get());
+                while (($k >= 0) && ($len === strlen($tokenList[$i]->get()))) {
+                    if (!isset($tokenList[$k])) { # FIXME: this can be wrong if we have schema . table . column
                         $k--;
                         continue;
                     }
-                    $tokens[$i] = $tokens[$k] . $tokens[$i];
-                    unset($tokens[$k]);
+                    $tokenList[$k]->add($tokenList[$i]);
+                    $tokenList[$i] = $tokenList[$k];
+                    unset($tokenList[$k]);
                     $k--;
                 }
             }
 
-            if ($this->endsWith($tokens[$i], '.')) {
+            if ($tokenList[$i]->endsWith('.')) {
 
                 // concat the next tokens, till the token has been changed
                 $k = $i + 1;
-                $len = strlen($tokens[$i]);
-                while (($k < $cnt) && ($len == strlen($tokens[$i]))) {
-                    if (!isset($tokens[$k])) {
+                $len = strlen($tokenList[$i]->get());
+                while (($k < $cnt) && ($len === strlen($tokenList[$i]->get()))) {
+                    if (!isset($tokenList[$k])) {
                         $k++;
                         continue;
                     }
-                    $tokens[$i] .= $tokens[$k];
-                    unset($tokens[$k]);
+                    $tokenList[$i]->add($tokenList[$k]);
+                    unset($tokenList[$k]);
                     $k++;
                 }
             }
@@ -315,45 +322,47 @@ class PHPSQLLexer extends PHPSQLParserUtils {
             $i++;
         }
 
-        return array_values($tokens);
+        return array_values($tokenList);
     }
 
-    private function concatEscapeSequences($tokens) {
-        $tokenCount = count($tokens);
+    private function concatEscapeSequences($tokenList) {
+        $tokenCount = count($tokenList);
         $i = 0;
         while ($i < $tokenCount) {
 
-            if ($this->endsWith($tokens[$i], "\\")) {
+            $token = $tokenList[$i];
+
+            if ($token->endsWith("\\")) {
                 $i++;
-                if (isset($tokens[$i])) {
-                    $tokens[$i - 1] .= $tokens[$i];
-                    unset($tokens[$i]);
+                if (isset($tokenList[$i])) {
+                    $token->add($tokenList[$i]);
+                    unset($tokenList[$i]);
                 }
             }
             $i++;
         }
-        return array_values($tokens);
+        return array_values($tokenList);
     }
 
-    private function balanceParenthesis($tokens) {
-        $token_count = count($tokens);
+    private function balanceParenthesis($tokenList) {
+        $tokenCount = count($tokenList);
         $i = 0;
-        while ($i < $token_count) {
-            if ($tokens[$i] !== '(') {
+        while ($i < $tokenCount) {
+            if ($tokenList[$i]->get() !== '(') {
                 $i++;
                 continue;
             }
             $count = 1;
-            for ($n = $i + 1; $n < $token_count; $n++) {
-                $token = $tokens[$n];
-                if ($token === '(') {
+            for ($n = $i + 1; $n < $tokenCount; $n++) {
+                $token = $tokenList[$n];
+                if ($token->get() === '(') {
                     $count++;
                 }
-                if ($token === ')') {
+                if ($token->get() === ')') {
                     $count--;
                 }
-                $tokens[$i] .= $token;
-                unset($tokens[$n]);
+                $tokenList[$i]->add($token);
+                unset($tokenList[$n]);
                 if ($count === 0) {
                     $n++;
                     break;
@@ -361,6 +370,6 @@ class PHPSQLLexer extends PHPSQLParserUtils {
             }
             $i = $n;
         }
-        return array_values($tokens);
+        return array_values($tokenList);
     }
 }
