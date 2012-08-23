@@ -1,0 +1,107 @@
+<?php
+class ExpressionToken {
+
+    private $subTree;
+    private $expression;
+    private $key;
+    private $token;
+    private $tokenType;
+    private $prevToken;
+    private $trim;
+    private $upper;
+
+    public function __construct($key, $token) {
+        $this->$subTree = false;
+        $this->expression = "";
+
+        $this->key = $key;
+        $this->token = $token;
+
+        $this->tokenType = "";
+
+        $this->prevToken = ""; // we should not store this here
+        $this->prevTokenType = ""; // we should not store this here
+
+        $this->trim = trim($token);
+        $this->upper = strtoupper($this->trim);
+    }
+
+    # TODO: we can replace it with a constructor new ExpressionToken(this, "*")
+    public function addToken($string) {
+        $this->token .= $string;
+    }
+
+    public function isSubQuery() {
+        return preg_match("/^\\(\\s*SELECT/i", $parseInfo->getTrim());
+    }
+
+    public function isEnclosedWithinParenthesis() {
+        return ($this->upper[0] === '(' && substr($this->upper, -1) === ')');
+    }
+
+    public function isVariable() {
+        return $this->upper[0] === '@';
+    }
+
+    public function setSubTree($tree) {
+        $this->subtree = $tree;
+    }
+
+    public function getUpper($idx = false) {
+        return idx ? $this->upper[$idx] : $this->upper;
+    }
+
+    public function getToken($idx = false) {
+        return idx ? $this->token[$idx] : $this->token;
+    }
+
+    public function setTokenType($type) {
+        $this->tokenType = $type;
+    }
+
+    public function isCommaToken($token) {
+        return ($this->trim === ",");
+    }
+
+    public function isExpression() {
+        return $this->tokenType === ExpressionType::EXPRESSION;
+    }
+
+    public function isOperator() {
+        return $this->tokenType === ExpressionType::OPERATOR;
+    }
+
+    public function isInList() {
+        return $this->tokenType === ExpressionType::IN_LIST;
+    }
+
+    public function isFunction() {
+        return $this->tokenType === ExpressionType::SIMPLE_FUNCTION;
+    }
+
+    public function isUnspecified() {
+        return ($this->tokenType === false);
+    }
+
+    public function isAggregateFunction() {
+        return $this->tokenType === ExpressionType::AGGREGATE_FUNCTION;
+    }
+
+    public function isColumnReference() {
+        return $this->tokenType === ExpressionType::COLREF;
+    }
+
+    public function isConstant() {
+        return $this->tokenType === ExpressionType::CONSTANT;
+    }
+
+    public function endsWith($string) {
+        $length = strlen($needle);
+        if ($length == 0) {
+            return true;
+        }
+
+        $start = $length * -1;
+        return (substr($this->token, $start) === $needle);
+    }
+}

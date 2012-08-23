@@ -128,4 +128,8 @@ class PHPSQLParserUtils extends PHPSQLParserConstants {
         return trim($trim);
     }
 
+    public function getLastOf($array) {
+        // $array is a copy of the original array, so we can change it without sideeffects
+        return array_pop($array);
+    } 
 }
