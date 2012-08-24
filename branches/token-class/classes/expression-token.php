@@ -19,7 +19,7 @@ class ExpressionToken {
         $this->upper = strtoupper($this->trim);
     }
 
-    # TODO: we can replace it with a constructor new ExpressionToken(this, "*")
+    # TODO: we could replace it with a constructor new ExpressionToken(this, "*")
     public function addToken($string) {
         $this->token .= $string;
     }
@@ -88,6 +88,10 @@ class ExpressionToken {
         return $this->tokenType === ExpressionType::CONSTANT;
     }
 
+    public function isWhitespace() {
+        return ($this->trim === "");
+    }
+
     public function endsWith($string) {
         $length = strlen($needle);
         if ($length == 0) {
@@ -97,8 +101,8 @@ class ExpressionToken {
         $start = $length * -1;
         return (substr($this->token, $start) === $needle);
     }
-    
+
     public function toArray() {
-    	return array('expr_type' => $this->tokenType, 'base_expr' => $this->token, 'sub_tree' => $this->subTree);
+        return array('expr_type' => $this->tokenType, 'base_expr' => $this->token, 'sub_tree' => $this->subTree);
     }
 }
