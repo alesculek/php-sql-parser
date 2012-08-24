@@ -4,7 +4,7 @@ class Comment extends Token implements Serializable {
     private $inline;
 
     public function __construct($string) {
-        parent::__construct();
+        parent::__construct($string);
         $this->inline = isset($string[0]) && isset($string[1]) && $string[0] === '-' && $string[1] === '-';
     }
 
