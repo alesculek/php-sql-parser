@@ -1157,14 +1157,14 @@ if (!defined('HAVE_PHP_SQL_PARSER')) {
 
             $resultList = array();
             $skip_next = false;
-			$curr = new ExpressionToken();
-			
+            $curr = new ExpressionToken();
+
             foreach ($tokens as $k => $v) {
 
-            	$prev = $curr;
+                $prev = $curr;
                 $curr = new ExpressionToken($k, $v);
 
-                if ($curr->getTrim() === "") {
+                if ($curr->isWhitespace()) {
                     continue;
                 }
 
@@ -1184,11 +1184,11 @@ if (!defined('HAVE_PHP_SQL_PARSER')) {
                     /* is it an in-list? */
 
                     $localTokenList = $this->splitSQLIntoTokens($this->removeParenthesisFromStart($curr->getTrim()));
-                                        
+
                     # if we have a colref followed by a parenthesis pair,
                     # it isn't a colref, it is a user-function
                     if ($prev->isColumnReference() || $prev->isFunction() || $prev->isAggregateFunction()) {
-                    	
+
                         foreach ($localTokenList as $k => $v) {
                             $tmpToken = new ExpressionToken($k, $v);
                             if ($tmpToken->isCommaToken()) {
@@ -1198,14 +1198,14 @@ if (!defined('HAVE_PHP_SQL_PARSER')) {
 
                         $localTokenList = array_values($localTokenList);
                         $curr->setSubTree($this->process_expr_list($localTokenList));
-                        
+
                         $prev->setSubTree($curr->getSubTree());
                         if ($prev->isColumnReference()) {
-                        	$prev->setTokenType(ExpressionType::SIMPLE_FUNCTION);	
-						}
-						
-						array_pop($resultList);
-						$curr = $prev;
+                            $prev->setTokenType(ExpressionType::SIMPLE_FUNCTION);
+                        }
+
+                        array_pop($resultList);
+                        $curr = $prev;
                     }
 
                     if ($prev->getUpper() === 'IN') {
@@ -1234,11 +1234,12 @@ if (!defined('HAVE_PHP_SQL_PARSER')) {
                         $curr->setTokenType(ExpressionType::MATCH_ARGUMENTS);
                     }
 
+                    # we have parenthesis, but it seems to be an expression
                     if (!$curr->isUnspecified()) {
                         $curr->setSubTree($this->process_expr_list($localTokenList));
                         $curr->setTokenType(ExpressionType::BRACKED_EXPRESSION);
                     }
-                    
+
                 } elseif ($curr->isVariable()) {
                     // a variable
                     $curr->setTokenType($this->getVariableType($curr->getUpper()));
@@ -1321,8 +1322,9 @@ if (!defined('HAVE_PHP_SQL_PARSER')) {
                     // differ between preceding sign and operator
                         $curr->setSubTree(false);
 
-                        if ($prev->isColumnReference() || $prev->isFunction() || $prev->isAggregateFunction() || $prev->isConstant()
-                                || $prev->isSubQuery() || $prev->isExpression() || $prev->isBracketExpression()) {
+                        if ($prev->isColumnReference() || $prev->isFunction() || $prev->isAggregateFunction()
+                                || $prev->isConstant() || $prev->isSubQuery() || $prev->isExpression()
+                                || $prev->isBracketExpression()) {
                             $curr->setTokenType(ExpressionType::OPERATOR);
                         } else {
                             $curr->setTokenType(ExpressionType::SIGN);
@@ -1347,7 +1349,7 @@ if (!defined('HAVE_PHP_SQL_PARSER')) {
                             if (is_numeric($curr->getToken())) {
 
                                 if ($prev->isSign()) {
-                                    $prev->addToken($curr->getToken());        # it is a negative numeric constant
+                                    $prev->addToken($curr->getToken()); # it is a negative numeric constant
                                     $prev->setTokenType(ExpressionType::CONSTANT);
                                     # skip current token
                                 } else {
@@ -1363,8 +1365,8 @@ if (!defined('HAVE_PHP_SQL_PARSER')) {
                 }
 
                 /* is a reserved word? */
-                if (!$curr->isOperator() && !$curr->isInList() && !$curr->isFunction()
-                        && !$curr->isAggregateFunction() && in_array($curr->getUpper(), parent::$reserved)) {
+                if (!$curr->isOperator() && !$curr->isInList() && !$curr->isFunction() && !$curr->isAggregateFunction()
+                        && in_array($curr->getUpper(), parent::$reserved)) {
 
                     switch ($curr->getUpper()) {
                     case 'AVG':
@@ -1401,19 +1403,14 @@ if (!defined('HAVE_PHP_SQL_PARSER')) {
                 }
 
                 if ($curr->isUnspecified()) {
-                   $curr->setTokenType(ExpressionType::EXPRESSION);
-                   $curr->setSubTree($this->process_expr_list($this->splitSQLIntoTokens($curr->getTrim())));
+                    $curr->setTokenType(ExpressionType::EXPRESSION);
+                    $curr->setSubTree($this->process_expr_list($this->splitSQLIntoTokens($curr->getTrim())));
                 }
 
                 $resultList[] = $curr;
             } // end of for-loop
-            
-            $expr = array();
-            foreach ($resultList as $token) {
-            	$expr[] = $token->toArray();
-            }
 
-            return (empty($expr) ? false : $expr);
+            return $this->toArray($resultList);
         }
 
         /**
