@@ -6,22 +6,15 @@ class ExpressionToken {
     private $key;
     private $token;
     private $tokenType;
-    private $prevToken;
     private $trim;
     private $upper;
 
-    public function __construct($key, $token) {
-        $this->$subTree = false;
+    public function __construct($key = "", $token = "") {
+        $this->subTree = false;
         $this->expression = "";
-
         $this->key = $key;
         $this->token = $token;
-
         $this->tokenType = "";
-
-        $this->prevToken = ""; // we should not store this here
-        $this->prevTokenType = ""; // we should not store this here
-
         $this->trim = trim($token);
         $this->upper = strtoupper($this->trim);
     }
@@ -103,5 +96,9 @@ class ExpressionToken {
 
         $start = $length * -1;
         return (substr($this->token, $start) === $needle);
+    }
+    
+    public function toArray() {
+    	return array('expr_type' => $this->tokenType, 'base_expr' => $this->token, 'sub_tree' => $this->subTree);
     }
 }
