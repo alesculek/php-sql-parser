@@ -4,7 +4,7 @@
 =Where can I get PHP-SQL-Parser?=
 
 
-GoogleCode does not support new downloads starting January 15th, 2014. You can download all old versions within the [http://code.google.com/p/php-sql-parser/downloads/list Download section], but newer packages you will not find there. Currently we provide two alternatives:
+GoogleCode does not support new downloads starting January 15th, 2014. You can find all old versions within the [http://code.google.com/p/php-sql-parser/downloads/list Download section], but newer packages you will not find there. Currently we provide two alternatives:
 
 
 ==Google Drive==
