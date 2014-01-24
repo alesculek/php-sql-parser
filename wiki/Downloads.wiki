@@ -1,5 +1,9 @@
 #labels Featured
-=Where I can get PHP-SQL-Parser?=
+=Where can I get PHP-SQL-Parser?=
+
+
+GoogleCode did not support new downloads since January 15th, 2014. You can download all old versions within the Download section, but newer packages you will not find there. Currently we provide two alternatives:
+
 
 ==Google Drive==
 https://googledrive.com/host/0B8F9pu5KRD3YOGZ4MlA3cmg5Ync/
