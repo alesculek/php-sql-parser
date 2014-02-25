@@ -1,0 +1,13 @@
+#summary That are the next steps of the project.
+#labels Featured,Phase-Implementation
+
+  * refactoring of 
+    * the parser tests (all tests should work)
+    * the RENAME statement
+    * the DROP statement
+
+  * re-programming of
+    * FROM statement
+
+  * finishing of
+    * issue 33 (creator should build PARTITION parts)
