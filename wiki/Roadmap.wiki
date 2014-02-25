@@ -1,4 +1,4 @@
-#summary That are the next steps of the project.
+#summary These are the next steps of the project.
 #labels Featured,Phase-Implementation
 
   * refactoring of 
