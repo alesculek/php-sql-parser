@@ -1,6 +1,8 @@
 #summary These are the next steps of the project.
 #labels Featured,Phase-Implementation
 
+  * supporting CREATE INDEX (see issue 131)
+
   * refactoring of 
     * the parser tests (all tests should work)
     * the RENAME statement
